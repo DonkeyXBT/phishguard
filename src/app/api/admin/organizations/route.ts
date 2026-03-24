@@ -26,8 +26,12 @@ export async function POST(req: NextRequest) {
   if (!name?.trim()) return err('Organization name is required')
 
   const apiKey = randomBytes(20).toString('hex')
-  const org = await prisma.organization.create({
+  const created = await prisma.organization.create({
     data: { name: name.trim(), apiKey },
+  })
+  const org = await prisma.organization.findUnique({
+    where: { id: created.id },
+    include: { _count: { select: { users: true, reports: true } } },
   })
 
   return ok(org, 201)

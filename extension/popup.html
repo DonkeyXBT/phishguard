@@ -5,34 +5,145 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      width: 320px;
+      width: 340px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-size: 13px;
       background: #111827;
       color: #f9fafb;
     }
+
+    /* Header */
     .header {
       background: #1f2937;
       border-bottom: 1px solid #374151;
-      padding: 14px 16px;
+      padding: 12px 14px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: space-between;
     }
+    .header-left { display: flex; align-items: center; gap: 10px; }
     .logo {
-      width: 32px;
-      height: 32px;
+      width: 30px; height: 30px;
       background: #dc2626;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
     }
-    .header-title { font-weight: 700; font-size: 15px; }
-    .header-sub { font-size: 11px; color: #9ca3af; }
-    .section { padding: 14px 16px; border-bottom: 1px solid #1f2937; }
-    .label { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600; }
+    .header-title { font-weight: 700; font-size: 14px; }
+    .header-sub { font-size: 10px; color: #9ca3af; margin-top: 1px; }
+    .gear-btn {
+      background: none; border: none; cursor: pointer;
+      color: #6b7280; padding: 4px; border-radius: 5px;
+      font-size: 16px; line-height: 1;
+      transition: color 0.15s, background 0.15s;
+    }
+    .gear-btn:hover { color: #f9fafb; background: #374151; }
+
+    /* Connection dot */
+    .conn-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      display: inline-block; margin-right: 5px;
+    }
+    .conn-dot.ok { background: #10b981; }
+    .conn-dot.err { background: #ef4444; }
+    .conn-dot.loading { background: #f59e0b; }
+
+    /* Status area */
+    #status-section { padding: 16px 14px; }
+
+    .not-email {
+      text-align: center;
+      padding: 24px 14px;
+      color: #6b7280;
+    }
+    .not-email .icon { font-size: 32px; margin-bottom: 8px; }
+    .not-email .msg { font-size: 12px; line-height: 1.5; }
+
+    /* Risk card */
+    .risk-card {
+      border-radius: 10px;
+      padding: 14px;
+      border: 1px solid;
+      margin-bottom: 12px;
+    }
+    .risk-card.low      { background: #052e16; border-color: #166534; }
+    .risk-card.medium   { background: #422006; border-color: #92400e; }
+    .risk-card.high     { background: #431407; border-color: #9a3412; }
+    .risk-card.critical { background: #450a0a; border-color: #991b1b; }
+    .risk-card.scanning { background: #1e293b; border-color: #334155; }
+
+    .risk-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .risk-label { font-weight: 700; font-size: 14px; }
+    .risk-label.low      { color: #4ade80; }
+    .risk-label.medium   { color: #fbbf24; }
+    .risk-label.high     { color: #fb923c; }
+    .risk-label.critical { color: #f87171; }
+    .risk-label.scanning { color: #94a3b8; }
+    .risk-score { font-size: 22px; font-weight: 800; }
+    .risk-score.low      { color: #4ade80; }
+    .risk-score.medium   { color: #fbbf24; }
+    .risk-score.high     { color: #fb923c; }
+    .risk-score.critical { color: #f87171; }
+    .risk-score.scanning { color: #64748b; }
+
+    .risk-bar-track { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-bottom: 8px; }
+    .risk-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
+    .risk-bar-fill.low      { background: #4ade80; }
+    .risk-bar-fill.medium   { background: #fbbf24; }
+    .risk-bar-fill.high     { background: #fb923c; }
+    .risk-bar-fill.critical { background: #f87171; }
+
+    .signals-preview { display: flex; flex-wrap: wrap; gap: 4px; }
+    .signal-chip {
+      background: rgba(255,255,255,0.08);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 10px;
+      color: #e5e7eb;
+    }
+
+    /* Summary text */
+    .summary-text { font-size: 11px; color: #9ca3af; margin-top: 6px; line-height: 1.4; }
+
+    /* Buttons */
+    .btn-report {
+      width: 100%;
+      background: #dc2626;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-report:hover:not(:disabled) { background: #b91c1c; }
+    .btn-report:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-report.reported { background: #166534; cursor: default; }
+
+    /* Connection status bar */
+    .conn-bar {
+      padding: 7px 14px;
+      border-top: 1px solid #1f2937;
+      display: flex; align-items: center;
+      font-size: 11px; color: #6b7280;
+    }
+
+    /* Settings panel */
+    #settings-section {
+      display: none;
+      border-top: 1px solid #374151;
+      padding: 14px;
+    }
+    #settings-section.open { display: block; }
+    .settings-title {
+      font-size: 11px; font-weight: 600; color: #9ca3af;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .field-label { font-size: 11px; color: #6b7280; margin-bottom: 4px; }
     input {
       width: 100%;
       background: #1f2937;
@@ -40,65 +151,76 @@
       border-radius: 6px;
       padding: 7px 10px;
       color: #f9fafb;
-      font-size: 12px;
+      font-size: 11px;
       outline: none;
       font-family: monospace;
+      margin-bottom: 8px;
     }
     input:focus { border-color: #3b82f6; }
-    .save-btn {
-      width: 100%;
-      background: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 10px;
+    .btn-save {
+      width: 100%; background: #2563eb; color: white;
+      border: none; border-radius: 6px; padding: 7px;
+      font-size: 12px; font-weight: 600; cursor: pointer;
     }
-    .save-btn:hover { background: #1d4ed8; }
-    .status { font-size: 11px; color: #10b981; margin-top: 6px; display: none; }
-    .footer {
-      padding: 12px 16px;
-      text-align: center;
-    }
-    .admin-link {
-      display: inline-block;
-      background: #374151;
-      color: #d1d5db;
-      text-decoration: none;
-      border-radius: 6px;
-      padding: 7px 14px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-    .admin-link:hover { background: #4b5563; color: white; }
+    .btn-save:hover { background: #1d4ed8; }
+    .saved-msg { font-size: 11px; color: #10b981; margin-top: 5px; display: none; text-align: center; }
   </style>
 </head>
 <body>
+
   <div class="header">
-    <div class="logo">🛡️</div>
-    <div>
-      <div class="header-title">PhishGuard</div>
-      <div class="header-sub">Phishing Detection</div>
+    <div class="header-left">
+      <div class="logo">🛡️</div>
+      <div>
+        <div class="header-title">PhishGuard</div>
+        <div class="header-sub">Email Security</div>
+      </div>
+    </div>
+    <button class="gear-btn" id="gearBtn" title="Settings">⚙️</button>
+  </div>
+
+  <div id="status-section">
+    <div class="not-email" id="not-email-msg" style="display:none">
+      <div class="icon">📧</div>
+      <div class="msg">Open an email in Gmail or Outlook<br>to see the phishing risk analysis.</div>
+    </div>
+
+    <div id="scan-result" style="display:none">
+      <div class="risk-card" id="risk-card">
+        <div class="risk-row">
+          <span class="risk-label" id="risk-label">Scanning...</span>
+          <span class="risk-score" id="risk-score"></span>
+        </div>
+        <div class="risk-bar-track">
+          <div class="risk-bar-fill" id="risk-bar" style="width:0%"></div>
+        </div>
+        <div class="signals-preview" id="signals-preview"></div>
+        <div class="summary-text" id="summary-text"></div>
+      </div>
+
+      <button class="btn-report" id="reportBtn">
+        🚩 Report as Phishing
+      </button>
+    </div>
+
+    <div id="scanning-msg" style="display:none; text-align:center; padding: 20px 0; color:#6b7280; font-size:12px;">
+      🔍 Scanning current email...
     </div>
   </div>
 
-  <div class="section">
-    <div class="label">Server URL</div>
-    <input type="url" id="apiUrl" placeholder="http://localhost:8000" />
+  <div class="conn-bar">
+    <span class="conn-dot" id="connDot"></span>
+    <span id="connText">Checking connection...</span>
   </div>
 
-  <div class="section">
-    <div class="label">API Key</div>
-    <input type="text" id="apiKey" placeholder="Your organization API key" />
-    <button class="save-btn" id="saveBtn">Save Settings</button>
-    <div class="status" id="savedStatus">✅ Settings saved</div>
-  </div>
-
-  <div class="footer">
-    <a href="#" class="admin-link" id="adminLink">Open Admin Console →</a>
+  <div id="settings-section">
+    <div class="settings-title">⚙️ Configuration (set by IT admin)</div>
+    <div class="field-label">Server URL</div>
+    <input type="url" id="apiUrl" placeholder="https://your-phishguard.vercel.app" />
+    <div class="field-label">API Key</div>
+    <input type="text" id="apiKey" placeholder="Organization API key" />
+    <button class="btn-save" id="saveBtn">Save Settings</button>
+    <div class="saved-msg" id="savedMsg">✅ Saved</div>
   </div>
 
   <script src="popup.js"></script>

@@ -1,5 +1,37 @@
 const ANALYZED_ATTR = 'data-phishguard-analyzed';
 let currentUserEmail = '';
+let currentScan      = null;   // last analysis result
+let currentEmailData = null;   // last parsed email data (for reporting from popup)
+
+// ── Popup message handler ─────────────────────────────────────────────────────
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message.type === 'GET_CURRENT_SCAN') {
+    sendResponse({ scan: currentScan, emailData: currentEmailData });
+    return true;
+  }
+  if (message.type === 'REPORT_CURRENT_EMAIL') {
+    if (!currentEmailData) { sendResponse({ ok: false, error: 'No email data' }); return true; }
+    chrome.runtime.sendMessage(
+      {
+        type: 'REPORT_EMAIL',
+        data: {
+          reporter_email: currentUserEmail || 'unknown@unknown.com',
+          subject:        currentEmailData.subject,
+          sender:         currentEmailData.sender,
+          reply_to:       currentEmailData.reply_to,
+          email_body_text: currentEmailData.body_text,
+          email_body_html: currentEmailData.body_html,
+          source: 'user_report',
+        },
+      },
+      response => {
+        if (response?.result) sendResponse({ ok: true });
+        else sendResponse({ ok: false, error: response?.error || 'Failed' });
+      }
+    );
+    return true; // keep channel open for async response
+  }
+});
 
 function getUserEmail() {
   const el = document.querySelector('[data-email]');
@@ -109,9 +141,9 @@ function analyzeEmailContainer(container) {
     {
       type: 'ANALYZE_EMAIL',
       data: {
-        sender: emailData.sender,
-        reply_to: emailData.reply_to,
-        subject: emailData.subject,
+        sender:    emailData.sender,
+        reply_to:  emailData.reply_to,
+        subject:   emailData.subject,
         body_text: emailData.body_text,
         body_html: emailData.body_html,
       },
@@ -119,6 +151,8 @@ function analyzeEmailContainer(container) {
     (response) => {
       loading.remove();
       if (response?.result) {
+        currentScan      = response.result;
+        currentEmailData = emailData;
         const banner = createBanner(response.result, emailData, container);
         container.insertBefore(banner, container.firstChild);
       } else if (response?.error) {

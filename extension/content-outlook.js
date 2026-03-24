@@ -1,4 +1,35 @@
-const ANALYZED_ATTR = 'data-phishguard-analyzed';
+const ANALYZED_ATTR  = 'data-phishguard-analyzed';
+let currentScan      = null;
+let currentEmailData = null;
+
+// ── Popup message handler ─────────────────────────────────────────────────────
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message.type === 'GET_CURRENT_SCAN') {
+    sendResponse({ scan: currentScan, emailData: currentEmailData });
+    return true;
+  }
+  if (message.type === 'REPORT_CURRENT_EMAIL') {
+    if (!currentEmailData) { sendResponse({ ok: false, error: 'No email data' }); return true; }
+    chrome.runtime.sendMessage(
+      {
+        type: 'REPORT_EMAIL',
+        data: {
+          reporter_email:  'user@company.com',
+          subject:         currentEmailData.subject,
+          sender:          currentEmailData.sender,
+          email_body_text: currentEmailData.body_text,
+          email_body_html: currentEmailData.body_html,
+          source: 'user_report',
+        },
+      },
+      response => {
+        if (response?.result) sendResponse({ ok: true });
+        else sendResponse({ ok: false, error: response?.error || 'Failed' });
+      }
+    );
+    return true;
+  }
+});
 
 function parseOutlookEmail(container) {
   const subjectEl = document.querySelector('[role="heading"][class*="subject"], .allowTextSelection span[dir]');
@@ -93,8 +124,8 @@ function analyzeEmailContainer(container) {
     {
       type: 'ANALYZE_EMAIL',
       data: {
-        sender: emailData.sender,
-        subject: emailData.subject,
+        sender:    emailData.sender,
+        subject:   emailData.subject,
         body_text: emailData.body_text,
         body_html: emailData.body_html,
       },
@@ -102,6 +133,8 @@ function analyzeEmailContainer(container) {
     (response) => {
       loading.remove();
       if (response?.result) {
+        currentScan      = response.result;
+        currentEmailData = emailData;
         const banner = createBanner(response.result, emailData, container);
         container.insertBefore(banner, container.firstChild);
       }
