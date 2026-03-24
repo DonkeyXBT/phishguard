@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const offset = parseInt(searchParams.get('offset') ?? '0')
 
   const reports = await prisma.emailReport.findMany({
-    where: { orgId: user.orgId, ...(status ? { status } : {}), ...(riskLevel ? { riskLevel } : {}) },
+    where: { ...(status ? { status } : {}), ...(riskLevel ? { riskLevel } : {}) },
     orderBy: { reportedAt: 'desc' },
     take: limit,
     skip: offset,

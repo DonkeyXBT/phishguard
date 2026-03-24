@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params
 
   const report = await prisma.emailReport.findFirst({
-    where: { id, orgId: user.orgId },
+    where: { id },
     include: { links: true, attachments: true, actions: { orderBy: { createdAt: 'asc' } } },
   })
 

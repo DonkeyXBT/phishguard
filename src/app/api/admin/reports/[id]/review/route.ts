@@ -13,7 +13,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { action, notes } = await req.json()
   if (!VALID_ACTIONS.includes(action)) return err(`Invalid action. Must be one of: ${VALID_ACTIONS.join(', ')}`)
 
-  const report = await prisma.emailReport.findFirst({ where: { id, orgId: user.orgId } })
+  const report = await prisma.emailReport.findFirst({ where: { id } })
   if (!report) return err('Not found', 404)
 
   await prisma.$transaction([
