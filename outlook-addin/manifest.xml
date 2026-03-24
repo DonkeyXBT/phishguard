@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
+  xsi:type="MailApp">
+
+  <!-- ── Identity ── -->
+  <Id>3D4E2B1A-5C6D-7E8F-9A0B-C1D2E3F4A5B6</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>PhishGuard Security</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="PhishGuard"/>
+  <Description DefaultValue="Real-time phishing detection for Outlook. Automatically analyzes emails and lets users report suspicious messages to the security team."/>
+
+  <!-- Icons (Office requires PNG; replace .svg with .png for production) -->
+  <IconUrl DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon.svg"/>
+  <HighResolutionIconUrl DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon.svg"/>
+  <SupportUrl DefaultValue="https://phishing-detector-orpin-ten.vercel.app"/>
+
+  <!-- Allowed domains -->
+  <AppDomains>
+    <AppDomain>https://phishing-detector-orpin-ten.vercel.app</AppDomain>
+  </AppDomains>
+
+  <Hosts>
+    <Host Name="Mailbox"/>
+  </Hosts>
+
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.1"/>
+    </Sets>
+  </Requirements>
+
+  <!-- Legacy task pane (Outlook 2013/2016 fallback) -->
+  <FormSettings>
+    <Form xsi:type="ItemRead">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/taskpane.html"/>
+        <RequestedHeight>350</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+
+  <!-- Permissions: ReadItem lets us read subject, sender, and body -->
+  <Permissions>ReadItem</Permissions>
+
+  <!-- Activate on any email being read -->
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
+  </Rule>
+
+  <!-- ── Modern ribbon button (Outlook 2016+ / 365) ── -->
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+
+    <Requirements>
+      <bt:Sets DefaultMinVersion="1.3">
+        <bt:Set Name="Mailbox"/>
+      </bt:Sets>
+    </Requirements>
+
+    <Hosts>
+      <Host xsi:type="MailHost">
+        <DesktopFormFactor>
+
+          <!-- Background commands page (required even if unused) -->
+          <FunctionFile resid="Commands.Url"/>
+
+          <!-- Ribbon button in the reading pane toolbar -->
+          <ExtensionPoint xsi:type="MessageReadCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="PhishGuardGroup">
+                <Label resid="GroupLabel"/>
+
+                <!-- "Analyze" button that opens the task pane -->
+                <Control xsi:type="Button" id="PhishGuardOpenPane">
+                  <Label resid="Btn.Label"/>
+                  <Supertip>
+                    <Title resid="Btn.Label"/>
+                    <Description resid="Btn.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16"  resid="Icon.16"/>
+                    <bt:Image size="32"  resid="Icon.32"/>
+                    <bt:Image size="80"  resid="Icon.80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>PhishGuardPane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url"/>
+                  </Action>
+                </Control>
+
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon.svg"/>
+        <bt:Image id="Icon.32"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon.svg"/>
+        <bt:Image id="Icon.80"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon.svg"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Commands.Url"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/commands.html"/>
+        <bt:Url id="Taskpane.Url"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/taskpane.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="GroupLabel"  DefaultValue="PhishGuard"/>
+        <bt:String id="Btn.Label"   DefaultValue="Analyze Email"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="Btn.Tooltip" DefaultValue="Scan this email for phishing threats with PhishGuard"/>
+      </bt:LongStrings>
+    </Resources>
+
+  </VersionOverrides>
+</OfficeApp>

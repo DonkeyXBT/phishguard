@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PhishGuard</title>
+  <!-- Office.js must be loaded first -->
+  <script src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --bg2:       #161b27;
+      --bg3:       #1c2333;
+      --border:    rgba(255,255,255,0.07);
+      --text:      #f0f2f5;
+      --muted:     #6b7280;
+      --subtle:    #374151;
+      --blue:      #3b82f6;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --amber:     #f59e0b;
+      --orange:    #f97316;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+      font-size: 13px;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .logo {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, #dc2626, #991b1b);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(220,38,38,0.35);
+    }
+    .header-title { font-weight: 700; font-size: 14px; }
+    .header-sub   { font-size: 10px; color: var(--muted); margin-top: 1px; }
+    .gear-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--subtle); padding: 5px; border-radius: 6px;
+      font-size: 15px; line-height: 1;
+      transition: color 0.15s, background 0.15s;
+    }
+    .gear-btn:hover { color: var(--text); background: var(--bg3); }
+
+    /* ── Body ── */
+    .body { padding: 14px; }
+
+    /* ── States ── */
+    .state { display: none; }
+    .state.active { display: block; }
+
+    /* Loading */
+    .loading-wrap { text-align: center; padding: 40px 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid rgba(59,130,246,0.15);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      margin: 0 auto 12px;
+      animation: spin 0.8s linear infinite;
+    }
+    .loading-label { font-size: 12px; color: var(--muted); }
+
+    /* Need settings */
+    .need-settings-wrap { text-align: center; padding: 28px 14px 14px; }
+    .need-settings-wrap .icon { font-size: 32px; margin-bottom: 10px; }
+    .need-settings-wrap h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+    .need-settings-wrap p  { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 16px; }
+
+    /* Error */
+    .error-box {
+      background: #1f0a0a; border: 1px solid #7f1d1d33;
+      border-radius: 10px; padding: 14px; margin-bottom: 12px;
+      font-size: 12px; color: #fca5a5; line-height: 1.5;
+    }
+    .btn-retry {
+      background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+      border-radius: 7px; padding: 7px 14px; font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .btn-retry:hover { background: var(--subtle); }
+
+    /* ── Risk card ── */
+    .risk-card {
+      border-radius: 12px; padding: 14px;
+      border: 1px solid; margin-bottom: 12px;
+      position: relative; overflow: hidden;
+    }
+    .risk-card::before {
+      content: ''; position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+    }
+    .risk-card.low      { background: #071a10; border-color: #14532d33; }
+    .risk-card.medium   { background: #1a1200; border-color: #78350f33; }
+    .risk-card.high     { background: #180d04; border-color: #7c2d1233; }
+    .risk-card.critical { background: #170606; border-color: #7f1d1d33; }
+    .risk-card.low::before      { background: linear-gradient(90deg, #22c55e, #16a34a); }
+    .risk-card.medium::before   { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .risk-card.high::before     { background: linear-gradient(90deg, #f97316, #ea580c); }
+    .risk-card.critical::before { background: linear-gradient(90deg, #ef4444, #dc2626); }
+
+    .risk-top {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 10px;
+    }
+    .risk-left   { display: flex; align-items: center; gap: 9px; }
+    .risk-icon   { font-size: 22px; }
+    .risk-label  { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+    .risk-label.low      { color: #4ade80; }
+    .risk-label.medium   { color: #fbbf24; }
+    .risk-label.high     { color: #fb923c; }
+    .risk-label.critical { color: #f87171; }
+
+    .risk-badge {
+      display: inline-flex; align-items: baseline; gap: 2px;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+    }
+    .risk-badge .num   { font-size: 18px; line-height: 1; }
+    .risk-badge .denom { font-size: 10px; opacity: 0.6; }
+    .low    .risk-badge { background: rgba(34,197,94,0.15);  color: #4ade80; }
+    .medium .risk-badge { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .high   .risk-badge { background: rgba(251,146,60,0.15); color: #fb923c; }
+    .critical .risk-badge { background: rgba(248,113,113,0.15); color: #f87171; }
+
+    .risk-bar-track {
+      height: 3px; background: rgba(255,255,255,0.06);
+      border-radius: 2px; margin-bottom: 10px; overflow: hidden;
+    }
+    .risk-bar-fill {
+      height: 100%; border-radius: 2px;
+      transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+    }
+    .low    .risk-bar-fill { background: linear-gradient(90deg, #22c55e, #4ade80); }
+    .medium .risk-bar-fill { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .high   .risk-bar-fill { background: linear-gradient(90deg, #f97316, #fb923c); }
+    .critical .risk-bar-fill { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+    .risk-desc {
+      font-size: 12px; color: #9ca3af; line-height: 1.5; margin-bottom: 10px;
+    }
+
+    /* Signals */
+    .signals { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+    .signal-chip {
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px; padding: 3px 9px;
+      font-size: 11px; color: #cbd5e1; font-weight: 500;
+    }
+
+    /* Email meta */
+    .email-meta {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;
+    }
+    .meta-row { display: flex; gap: 6px; font-size: 11.5px; margin-bottom: 4px; }
+    .meta-row:last-child { margin-bottom: 0; }
+    .meta-key { color: var(--muted); flex-shrink: 0; min-width: 48px; }
+    .meta-val { color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── Buttons ── */
+    .btn-report {
+      width: 100%;
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      color: white; border: none; border-radius: 9px;
+      padding: 11px; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      box-shadow: 0 2px 10px rgba(220,38,38,0.3);
+      font-family: inherit;
+    }
+    .btn-report:hover:not(:disabled) {
+      background: linear-gradient(135deg, #b91c1c, #991b1b);
+      box-shadow: 0 4px 16px rgba(220,38,38,0.4);
+      transform: translateY(-1px);
+    }
+    .btn-report:disabled { opacity: 0.45; cursor: default; box-shadow: none; transform: none; }
+    .btn-report.reported {
+      background: linear-gradient(135deg, #15803d, #166534);
+      box-shadow: 0 2px 10px rgba(21,128,61,0.3);
+    }
+    .btn-analyze {
+      width: 100%; background: var(--blue); color: white;
+      border: none; border-radius: 9px; padding: 11px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: background 0.15s; font-family: inherit;
+    }
+    .btn-analyze:hover { background: #2563eb; }
+
+    /* ── Settings ── */
+    .settings-wrap { padding: 14px; border-top: 1px solid var(--border); }
+    .settings-title {
+      font-size: 10px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px;
+    }
+    .field-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
+    input[type="text"], input[type="url"] {
+      width: 100%; background: var(--bg2);
+      border: 1px solid var(--border); border-radius: 7px;
+      padding: 8px 10px; color: #e2e8f0;
+      font-size: 11.5px; outline: none;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      margin-bottom: 10px;
+      transition: border-color 0.15s;
+    }
+    input:focus { border-color: var(--blue); }
+    input::placeholder { color: #374151; }
+    .btn-save {
+      width: 100%; background: #2563eb; color: white;
+      border: none; border-radius: 7px; padding: 8px;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: background 0.15s; font-family: inherit;
+    }
+    .btn-save:hover { background: #1d4ed8; }
+    .saved-msg { font-size: 11px; color: #22c55e; margin-top: 6px; text-align: center; display: none; }
+
+    /* ── Conn bar ── */
+    .conn-bar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-top: 1px solid var(--border);
+      font-size: 11px; color: var(--muted); background: #0d1018;
+      position: sticky; bottom: 0;
+    }
+    .conn-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    @keyframes blink { 0%,100% { opacity:0.4; } 50% { opacity:1; } }
+    .conn-dot.ok      { background: #22c55e; box-shadow: 0 0 5px #22c55e88; }
+    .conn-dot.err     { background: #ef4444; }
+    .conn-dot.loading { background: var(--amber); animation: blink 1s ease-in-out infinite; }
+
+    .divider { height: 1px; background: var(--border); }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">🛡️</div>
+      <div>
+        <div class="header-title">PhishGuard</div>
+        <div class="header-sub">Email Security</div>
+      </div>
+    </div>
+    <button class="gear-btn" id="gearBtn" title="Settings">⚙️</button>
+  </div>
+
+  <!-- Main body -->
+  <div class="body">
+
+    <!-- State: initialising -->
+    <div class="state active" id="state-init">
+      <div class="loading-wrap">
+        <div class="spinner"></div>
+        <div class="loading-label">Loading PhishGuard...</div>
+      </div>
+    </div>
+
+    <!-- State: scanning -->
+    <div class="state" id="state-scanning">
+      <div class="loading-wrap">
+        <div class="spinner"></div>
+        <div class="loading-label">Analyzing email...</div>
+      </div>
+    </div>
+
+    <!-- State: needs API key -->
+    <div class="state" id="state-needs-key">
+      <div class="need-settings-wrap">
+        <div class="icon">🔑</div>
+        <h3>API Key Required</h3>
+        <p>Enter your organization's PhishGuard API key below to start scanning emails.</p>
+      </div>
+    </div>
+
+    <!-- State: error -->
+    <div class="state" id="state-error">
+      <div class="error-box" id="error-text">An error occurred.</div>
+      <button class="btn-retry" id="retryBtn">↺ Try Again</button>
+    </div>
+
+    <!-- State: result -->
+    <div class="state" id="state-result">
+
+      <!-- Risk card -->
+      <div class="risk-card low" id="risk-card">
+        <div class="risk-top">
+          <div class="risk-left">
+            <span class="risk-icon" id="risk-icon">✅</span>
+            <span class="risk-label low" id="risk-label">Safe Email</span>
+          </div>
+          <div class="risk-badge" id="risk-badge">
+            <span class="num" id="risk-score">0</span>
+            <span class="denom">/100</span>
+          </div>
+        </div>
+        <div class="risk-bar-track">
+          <div class="risk-bar-fill" id="risk-bar" style="width:0%"></div>
+        </div>
+        <div class="risk-desc" id="risk-desc"></div>
+        <div class="signals" id="signals"></div>
+      </div>
+
+      <!-- Email metadata -->
+      <div class="email-meta" id="email-meta">
+        <div class="meta-row">
+          <span class="meta-key">From</span>
+          <span class="meta-val" id="meta-sender">—</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-key">Subject</span>
+          <span class="meta-val" id="meta-subject">—</span>
+        </div>
+      </div>
+
+      <!-- Report button -->
+      <button class="btn-report" id="reportBtn">
+        🚩 Report as Phishing
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- Divider -->
+  <div class="divider"></div>
+
+  <!-- Settings panel -->
+  <div class="settings-wrap" id="settingsPanel" style="display:none">
+    <div class="settings-title">Configuration</div>
+    <div class="field-label">Server URL</div>
+    <input type="url" id="apiUrl" placeholder="https://your-phishguard.vercel.app" />
+    <div class="field-label">API Key</div>
+    <input type="text" id="apiKey" placeholder="Organization API key" />
+    <button class="btn-save" id="saveBtn">Save Settings</button>
+    <div class="saved-msg" id="savedMsg">✓ Saved — re-analyzing email...</div>
+  </div>
+
+  <!-- Connection bar -->
+  <div class="conn-bar">
+    <span class="conn-dot loading" id="connDot"></span>
+    <span id="connText">Connecting...</span>
+  </div>
+
+  <script src="taskpane.js"></script>
+</body>
+</html>
