@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  apiKey    String   @unique @map("api_key")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  users   User[]
+  reports EmailReport[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  orgId          String   @map("org_id")
+  email          String   @unique
+  hashedPassword String   @map("hashed_password")
+  fullName       String?  @map("full_name")
+  isAdmin        Boolean  @default(false) @map("is_admin")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization  @relation(fields: [orgId], references: [id])
+  actions      AdminAction[]
+
+  @@map("users")
+}
+
+model EmailReport {
+  id            String    @id @default(cuid())
+  orgId         String    @map("org_id")
+  reporterEmail String    @map("reporter_email")
+  recipientEmail String?  @map("recipient_email")
+  subject       String?
+  sender        String?
+  senderDomain  String?   @map("sender_domain")
+  replyTo       String?   @map("reply_to")
+  bodyText      String?   @map("body_text")
+  bodyHtml      String?   @map("body_html")
+  headers       Json      @default("{}")
+  riskScore     Int       @default(0) @map("risk_score")
+  riskLevel     String    @default("low") @map("risk_level")
+  signals       Json      @default("[]")
+  status        String    @default("pending")
+  source        String    @default("user_report")
+  reportedAt    DateTime  @default(now()) @map("reported_at")
+  reviewedAt    DateTime? @map("reviewed_at")
+  reviewedBy    String?   @map("reviewed_by")
+  adminNotes    String?   @map("admin_notes")
+
+  organization Organization    @relation(fields: [orgId], references: [id])
+  links        EmailLink[]
+  attachments  EmailAttachment[]
+  actions      AdminAction[]
+
+  @@map("email_reports")
+}
+
+model EmailLink {
+  id          String  @id @default(cuid())
+  reportId    String  @map("report_id")
+  displayText String? @map("display_text")
+  url         String?
+  finalUrl    String? @map("final_url")
+  domain      String?
+  isSuspicious Boolean @default(false) @map("is_suspicious")
+  riskReason  String? @map("risk_reason")
+
+  report EmailReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@map("email_links")
+}
+
+model EmailAttachment {
+  id           String  @id @default(cuid())
+  reportId     String  @map("report_id")
+  filename     String?
+  contentType  String? @map("content_type")
+  fileSize     Int?    @map("file_size")
+  isSuspicious Boolean @default(false) @map("is_suspicious")
+  riskReason   String? @map("risk_reason")
+
+  report EmailReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@map("email_attachments")
+}
+
+model AdminAction {
+  id        String   @id @default(cuid())
+  reportId  String   @map("report_id")
+  adminId   String   @map("admin_id")
+  action    String
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  report EmailReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  admin  User        @relation(fields: [adminId], references: [id])
+
+  @@map("admin_actions")
+}

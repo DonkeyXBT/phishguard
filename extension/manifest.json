@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "PhishGuard",
+  "version": "1.0.0",
+  "description": "Real-time phishing detection for Gmail and Outlook",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://mail.google.com/*",
+    "https://outlook.live.com/*",
+    "https://outlook.office.com/*",
+    "https://outlook.office365.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content-gmail.js"],
+      "css": ["phishguard.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://outlook.live.com/*",
+        "https://outlook.office.com/*",
+        "https://outlook.office365.com/*"
+      ],
+      "js": ["content-outlook.js"],
+      "css": ["phishguard.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "PhishGuard"
+  }
+}

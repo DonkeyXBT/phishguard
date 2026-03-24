@@ -1,0 +1,33 @@
+const BASE = ''  // same origin
+
+async function request(path: string, options?: RequestInit) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+  const res = await fetch(`${BASE}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options?.headers ?? {}),
+    },
+  })
+  if (res.status === 401 && typeof window !== 'undefined') {
+    localStorage.removeItem('token')
+    window.location.href = '/login'
+  }
+  return res
+}
+
+export const api = {
+  login: (email: string, password: string) =>
+    request('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  me: () => request('/api/auth/me'),
+  setup: () => request('/api/auth/setup', { method: 'POST' }),
+  getStats: () => request('/api/admin/stats'),
+  getQueue: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+    return request(`/api/admin/queue${qs}`)
+  },
+  getReport: (id: string) => request(`/api/admin/reports/${id}`),
+  reviewReport: (id: string, action: string, notes?: string) =>
+    request(`/api/admin/reports/${id}/review`, { method: 'PUT', body: JSON.stringify({ action, notes }) }),
+}
