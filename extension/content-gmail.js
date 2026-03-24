@@ -62,26 +62,36 @@ function createBanner(result, emailData, container) {
   if (existing) existing.remove();
 
   const level = result.risk_level;
-  const icons = { low: '✅', medium: '⚠️', high: '🔶', critical: '🚨' };
+  const icons  = { low: '✅', medium: '⚠️', high: '🔶', critical: '🚨' };
   const labels = { low: 'Low Risk', medium: 'Possible Phishing', high: 'Likely Phishing', critical: 'Phishing Detected' };
+  const subs   = { low: 'No significant threats detected.', medium: 'Some suspicious signals found — review carefully.', high: 'Multiple phishing indicators detected.', critical: 'This email shows strong signs of phishing.' };
 
   const banner = document.createElement('div');
   banner.className = `phishguard-banner pg-${level}`;
 
-  const topSignals = (result.signals || []).slice(0, 3).map(s => s.label);
+  const topSignals = (result.signals || []).slice(0, 4).map(s => s.label);
+  const signalHtml = topSignals.length
+    ? `<div class="phishguard-signals">${topSignals.map(s => `<span class="phishguard-signal-tag">⚑ ${s}</span>`).join('')}</div>`
+    : '';
+  const reportHtml = level !== 'low'
+    ? `<button class="phishguard-btn phishguard-btn-report" id="pg-report-btn">🚩 Report as Phishing</button>`
+    : '';
 
   banner.innerHTML = `
     <div class="phishguard-icon">${icons[level] || '🔍'}</div>
     <div class="phishguard-content">
-      <div class="phishguard-title">PhishGuard: ${labels[level] || level}</div>
-      <div class="phishguard-score">Risk Score: ${result.risk_score}/100 · ${result.signals?.length || 0} signal(s)</div>
-      ${topSignals.length > 0 ? `<div class="phishguard-signals">${topSignals.map(s => `<span class="phishguard-signal-tag">${s}</span>`).join('')}</div>` : ''}
+      <div class="phishguard-header">
+        <span class="phishguard-title">PhishGuard — ${labels[level] || level}</span>
+        <span class="phishguard-score-pill">Score ${result.risk_score}/100</span>
+      </div>
+      <div class="phishguard-sub">${subs[level] || ''}</div>
+      ${signalHtml}
       <div class="phishguard-actions">
-        ${level !== 'low' ? `<button class="phishguard-btn phishguard-btn-report" id="pg-report-btn">Report as Phishing</button>` : ''}
+        ${reportHtml}
         <button class="phishguard-btn phishguard-btn-dismiss" id="pg-dismiss-btn">Dismiss</button>
       </div>
     </div>
-    <button class="phishguard-close" id="pg-close-btn">×</button>
+    <button class="phishguard-close" id="pg-close-btn" title="Close">×</button>
   `;
 
   const reportBtn = banner.querySelector('#pg-report-btn');
@@ -128,7 +138,7 @@ function analyzeEmailContainer(container) {
 
   const loading = document.createElement('div');
   loading.className = 'phishguard-loading';
-  loading.innerHTML = '<span>🔍</span> PhishGuard is analyzing this email...';
+  loading.innerHTML = '<div class="phishguard-loading-dot"></div> PhishGuard is analyzing this email...';
   container.insertBefore(loading, container.firstChild);
 
   const emailData = parseGmailEmail(container);

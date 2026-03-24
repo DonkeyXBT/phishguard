@@ -5,7 +5,9 @@ const notEmailMsg   = document.getElementById('not-email-msg');
 const scanResult    = document.getElementById('scan-result');
 const scanningMsg   = document.getElementById('scanning-msg');
 const riskCard      = document.getElementById('risk-card');
+const riskIcon      = document.getElementById('risk-icon');
 const riskLabel     = document.getElementById('risk-label');
+const riskBadge     = document.getElementById('risk-badge');
 const riskScore     = document.getElementById('risk-score');
 const riskBar       = document.getElementById('risk-bar');
 const signalsDiv    = document.getElementById('signals-preview');
@@ -90,13 +92,15 @@ function showResult(scan) {
   const level = scan.risk_level || 'low';
   const score = scan.risk_score ?? 0;
 
-  clearLevelClasses(riskCard, riskLabel, riskScore, riskBar);
+  clearLevelClasses(riskCard, riskLabel, riskBadge, riskBar);
   riskCard.classList.add(level);
   riskLabel.classList.add(level);
-  riskScore.classList.add(level);
+  riskBadge.classList.add(level);
   riskBar.classList.add(level);
 
+  const icons  = { low: '✅', medium: '⚠️', high: '🔶', critical: '🚨' };
   const labels = { low: 'Low Risk', medium: 'Possible Phishing', high: 'Likely Phishing', critical: 'Phishing Detected' };
+  riskIcon.textContent  = icons[level] || '🔍';
   riskLabel.textContent = labels[level] || level;
   riskScore.textContent = score;
   riskBar.style.width   = score + '%';
