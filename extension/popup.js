@@ -79,9 +79,9 @@ function showScanning() {
 }
 
 function showNotEmail() {
-  scanResult.style.display  = 'none';
-  scanningMsg.style.display = 'none';
-  notEmailMsg.style.display = 'block';
+  scanResult.style.display   = 'none';
+  scanningMsg.style.display  = 'none';
+  notEmailMsg.style.display  = 'block';
 }
 
 function showResult(scan) {

@@ -1,7 +1,7 @@
 const ANALYZED_ATTR = 'data-phishguard-analyzed';
 let currentUserEmail = '';
-let currentScan      = null;   // last analysis result
-let currentEmailData = null;   // last parsed email data (for reporting from popup)
+let currentScan      = null;
+let currentEmailData = null;
 
 // ── Message handler ───────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -9,198 +9,174 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     sendResponse({ scan: currentScan, emailData: currentEmailData });
     return true;
   }
-
   if (message.type === 'REPORT_CURRENT_EMAIL') {
     if (!currentEmailData) { sendResponse({ ok: false, error: 'No email data' }); return true; }
     chrome.runtime.sendMessage(
-      {
-        type: 'REPORT_EMAIL',
-        data: {
-          reporter_email:  currentUserEmail || 'unknown@unknown.com',
-          subject:         currentEmailData.subject,
-          sender:          currentEmailData.sender,
-          reply_to:        currentEmailData.reply_to,
-          email_body_text: currentEmailData.body_text,
-          email_body_html: currentEmailData.body_html,
-          source: 'user_report',
-        },
-      },
-      response => {
-        if (response?.result) sendResponse({ ok: true });
-        else sendResponse({ ok: false, error: response?.error || 'Failed' });
-      }
+      { type: 'REPORT_EMAIL', data: buildReportPayload(currentEmailData) },
+      r => sendResponse(r?.result ? { ok: true } : { ok: false, error: r?.error || 'Failed' })
     );
     return true;
   }
-
-  // Background broadcast when admin deletes a report
   if (message.type === 'DELETIONS_UPDATED') {
     if (currentEmailData) checkAndHandleDeletion(currentEmailData);
     return true;
   }
 });
 
-// ── Deletion handling ─────────────────────────────────────────────────────────
-function emailMatchesDeletion(emailData, deletion) {
-  const norm = s => (s || '').toLowerCase().trim();
-  return norm(emailData.subject) === norm(deletion.subject) &&
-         norm(emailData.sender)  === norm(deletion.sender);
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function buildReportPayload(d) {
+  return {
+    reporter_email:  currentUserEmail || 'unknown@unknown.com',
+    subject:         d.subject,
+    sender:          d.sender,
+    reply_to:        d.reply_to,
+    email_body_text: d.body_text,
+    email_body_html: d.body_html,
+    source: 'user_report',
+  };
 }
 
-function createDeletionBanner(container) {
-  const existing = container.querySelector('.phishguard-banner, .phishguard-loading');
-  if (existing) existing.remove();
+function matchesDeletion(emailData, d) {
+  const n = s => (s || '').toLowerCase().trim();
+  return n(emailData.subject) === n(d.subject) && n(emailData.sender) === n(d.sender);
+}
 
-  const banner = document.createElement('div');
-  banner.className = 'phishguard-banner pg-deleted';
-  banner.innerHTML = `
-    <div class="phishguard-icon">⛔</div>
-    <div class="phishguard-content">
-      <div class="phishguard-header">
-        <span class="phishguard-title">Removed by Security Team</span>
-        <span class="phishguard-score-pill">Confirmed Phishing</span>
-      </div>
-      <div class="phishguard-sub">Your IT security team reviewed this email and confirmed it is phishing. It has been moved to trash.</div>
+// ── Deletion handling ─────────────────────────────────────────────────────────
+function checkAndHandleDeletion(emailData) {
+  chrome.storage.local.get(['deletedEmails', 'ackedDeletions'], ({ deletedEmails = [], ackedDeletions = [] }) => {
+    const match = deletedEmails.find(d => matchesDeletion(emailData, d));
+    if (!match || ackedDeletions.includes(match.id)) return;
+    const container = document.querySelector('.adn.ads[data-phishguard-analyzed], .gs[data-phishguard-analyzed]');
+    if (!container) return;
+    replaceBannerWithDeletion(container);
+    attemptGmailDelete();
+    chrome.storage.local.set({ ackedDeletions: [...ackedDeletions, match.id] });
+  });
+}
+
+function replaceBannerWithDeletion(container) {
+  const existing = container.querySelector('.phishguard-wrap, .phishguard-loading');
+  if (existing) existing.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'phishguard-wrap open';
+  wrap.innerHTML = `
+    <div class="phishguard-bar pg-deleted">
+      <span class="phishguard-bar-icon">⛔</span>
+      <span class="phishguard-bar-label">Removed by Security Team</span>
+      <span class="phishguard-bar-score">· Confirmed Phishing</span>
+    </div>
+    <div class="phishguard-details pg-deleted">
+      <div class="phishguard-desc">Your IT security team reviewed and confirmed this email is phishing. It has been moved to trash.</div>
       <div class="phishguard-signals">
         <span class="phishguard-signal-tag">🛡️ Admin reviewed</span>
         <span class="phishguard-signal-tag">🗑️ Moved to trash</span>
       </div>
-    </div>
-  `;
-  container.insertBefore(banner, container.firstChild);
+    </div>`;
+  container.insertBefore(wrap, container.firstChild);
 }
 
 function attemptGmailDelete() {
-  // Gmail toolbar delete button (various selectors across Gmail versions)
-  const selectors = [
-    '[data-tooltip="Delete"]',
-    '[aria-label="Delete"]',
-    '[title="Delete"]',
-    '.bA .ar9 [act="10"]',  // Gmail internal action code for delete
-  ];
+  const selectors = ['[data-tooltip="Delete"]', '[aria-label="Delete"]', '[title="Delete"]'];
   for (const sel of selectors) {
     const btn = document.querySelector(sel);
-    if (btn) { btn.click(); return true; }
+    if (btn) { btn.click(); return; }
   }
-  // Fallback: Gmail keyboard shortcut '#' = move to trash
   document.dispatchEvent(new KeyboardEvent('keydown', { key: '#', bubbles: true, cancelable: true }));
-  return false;
-}
-
-function checkAndHandleDeletion(emailData) {
-  chrome.storage.local.get(['deletedEmails', 'ackedDeletions'], ({ deletedEmails = [], ackedDeletions = [] }) => {
-    const match = deletedEmails.find(d => emailMatchesDeletion(emailData, d));
-    if (!match || ackedDeletions.includes(match.id)) return;
-
-    // Find the email container in the DOM
-    const container = document.querySelector(
-      '.adn.ads[data-phishguard-analyzed], .gs[data-phishguard-analyzed]'
-    );
-    if (!container) return;
-
-    createDeletionBanner(container);
-    attemptGmailDelete();
-
-    // Mark as handled so we don't repeat
-    chrome.storage.local.set({ ackedDeletions: [...ackedDeletions, match.id] });
-  });
 }
 
 // ── Email parsing ─────────────────────────────────────────────────────────────
 function getUserEmail() {
   const el = document.querySelector('[data-email]');
   if (el) return el.getAttribute('data-email') || '';
-  const title = document.querySelector('.gb_A.gb_La.gb_f');
-  return title?.textContent?.trim() || '';
+  return document.querySelector('.gb_A.gb_La.gb_f')?.textContent?.trim() || '';
 }
 
 function parseGmailEmail(container) {
   const subjectEl = document.querySelector('h2[data-legacy-thread-id], [data-thread-id] h2, .hP');
-  const subject = subjectEl?.textContent?.trim() || document.title.replace(' - Gmail', '').trim();
-
-  const senderEl = container.querySelector('[email]') || container.querySelector('.gD');
-  const sender = senderEl?.getAttribute('email') || senderEl?.textContent?.trim() || '';
-
-  const replyToEl = container.querySelector('[data-hovercard-id]');
-  const replyTo = replyToEl?.getAttribute('data-hovercard-id') || '';
-
-  const bodyEl = container.querySelector('.a3s.aiL') || container.querySelector('[data-message-id] .ii.gt div');
-  const bodyText = bodyEl?.innerText?.trim() || '';
-  const bodyHtml = bodyEl?.innerHTML || '';
-
-  return { subject, sender, reply_to: replyTo, body_text: bodyText, body_html: bodyHtml };
+  const subject   = subjectEl?.textContent?.trim() || document.title.replace(' - Gmail', '').trim();
+  const senderEl  = container.querySelector('[email]') || container.querySelector('.gD');
+  const sender    = senderEl?.getAttribute('email') || senderEl?.textContent?.trim() || '';
+  const replyTo   = container.querySelector('[data-hovercard-id]')?.getAttribute('data-hovercard-id') || '';
+  const bodyEl    = container.querySelector('.a3s.aiL') || container.querySelector('[data-message-id] .ii.gt div');
+  return { subject, sender, reply_to: replyTo, body_text: bodyEl?.innerText?.trim() || '', body_html: bodyEl?.innerHTML || '' };
 }
 
 // ── Banner creation ───────────────────────────────────────────────────────────
-function createBanner(result, emailData, container) {
-  const existing = container.querySelector('.phishguard-banner, .phishguard-loading');
-  if (existing) existing.remove();
+const ICONS  = { low: '✅', medium: '⚠️', high: '🔶', critical: '🚨' };
+const LABELS = { low: 'Safe Email', medium: 'Possible Phishing', high: 'Likely Phishing', critical: 'Phishing Detected' };
+const DESCS  = {
+  low:      'No significant threats detected in this email.',
+  medium:   'Some suspicious signals found — review carefully before clicking any links.',
+  high:     'Multiple phishing indicators detected. Do not click links or provide credentials.',
+  critical: 'This email shows strong signs of phishing. Do not interact with it.',
+};
 
-  const level  = result.risk_level;
-  const icons  = { low: '✅', medium: '⚠️', high: '🔶', critical: '🚨' };
-  const labels = { low: 'Low Risk', medium: 'Possible Phishing', high: 'Likely Phishing', critical: 'Phishing Detected' };
-  const subs   = { low: 'No significant threats detected.', medium: 'Some suspicious signals found — review carefully.', high: 'Multiple phishing indicators detected.', critical: 'This email shows strong signs of phishing.' };
+function createBanner(result, emailData) {
+  const level = result.risk_level || 'low';
+  const score = result.risk_score ?? 0;
+  const isSafe = level === 'low';
 
-  const banner = document.createElement('div');
-  banner.className = `phishguard-banner pg-${level}`;
+  const wrap = document.createElement('div');
+  wrap.className = 'phishguard-wrap';
 
-  const topSignals = (result.signals || []).slice(0, 4).map(s => s.label);
+  const topSignals = (result.signals || []).slice(0, 5).map(s => s.label);
   const signalHtml = topSignals.length
-    ? `<div class="phishguard-signals">${topSignals.map(s => `<span class="phishguard-signal-tag">⚑ ${s}</span>`).join('')}</div>`
-    : '';
-  const reportHtml = level !== 'low'
-    ? `<button class="phishguard-btn phishguard-btn-report" id="pg-report-btn">🚩 Report as Phishing</button>`
+    ? topSignals.map(s => `<span class="phishguard-signal-tag">⚑ ${s}</span>`).join('')
     : '';
 
-  banner.innerHTML = `
-    <div class="phishguard-icon">${icons[level] || '🔍'}</div>
-    <div class="phishguard-content">
-      <div class="phishguard-header">
-        <span class="phishguard-title">PhishGuard — ${labels[level] || level}</span>
-        <span class="phishguard-score-pill">Score ${result.risk_score}/100</span>
-      </div>
-      <div class="phishguard-sub">${subs[level] || ''}</div>
-      ${signalHtml}
+  const toggleHtml = !isSafe ? `<span class="phishguard-bar-toggle">▼</span>` : '';
+  const closeHtml  = `<button class="phishguard-bar-close" title="Dismiss">×</button>`;
+  const detailsHtml = !isSafe ? `
+    <div class="phishguard-details pg-${level}">
+      <div class="phishguard-desc">${DESCS[level] || ''}</div>
+      ${signalHtml ? `<div class="phishguard-signals">${signalHtml}</div>` : ''}
       <div class="phishguard-actions">
-        ${reportHtml}
-        <button class="phishguard-btn phishguard-btn-dismiss" id="pg-dismiss-btn">Dismiss</button>
+        <button class="phishguard-btn phishguard-btn-report">🚩 Report as Phishing</button>
+        <button class="phishguard-btn phishguard-btn-dismiss">Dismiss</button>
       </div>
+    </div>` : '';
+
+  wrap.innerHTML = `
+    <div class="phishguard-bar pg-${level}">
+      <span class="phishguard-bar-icon">${ICONS[level] || '🔍'}</span>
+      <span class="phishguard-bar-label">PhishGuard: ${LABELS[level] || level}</span>
+      <span class="phishguard-bar-score">· ${score}/100</span>
+      ${toggleHtml}
+      ${closeHtml}
     </div>
-    <button class="phishguard-close" id="pg-close-btn" title="Close">×</button>
-  `;
+    ${detailsHtml}`;
 
-  banner.querySelector('#pg-dismiss-btn')?.addEventListener('click', () => banner.remove());
-  banner.querySelector('#pg-close-btn')?.addEventListener('click',   () => banner.remove());
+  // Toggle expand/collapse on bar click (for non-safe levels)
+  if (!isSafe) {
+    wrap.querySelector('.phishguard-bar').addEventListener('click', e => {
+      if (e.target.closest('.phishguard-bar-close')) return;
+      wrap.classList.toggle('open');
+    });
+  }
 
-  banner.querySelector('#pg-report-btn')?.addEventListener('click', function () {
+  // Close/dismiss
+  wrap.querySelector('.phishguard-bar-close')?.addEventListener('click', () => wrap.remove());
+  wrap.querySelector('.phishguard-btn-dismiss')?.addEventListener('click', () => wrap.remove());
+
+  // Report button
+  wrap.querySelector('.phishguard-btn-report')?.addEventListener('click', function () {
     this.textContent = 'Reporting...';
     this.disabled = true;
     chrome.runtime.sendMessage(
-      {
-        type: 'REPORT_EMAIL',
-        data: {
-          reporter_email:  currentUserEmail || 'unknown@unknown.com',
-          subject:         emailData.subject,
-          sender:          emailData.sender,
-          reply_to:        emailData.reply_to,
-          email_body_text: emailData.body_text,
-          email_body_html: emailData.body_html,
-          source: 'user_report',
-        },
-      },
+      { type: 'REPORT_EMAIL', data: buildReportPayload(emailData) },
       (response) => {
         if (response?.result) {
           this.textContent = '✅ Reported';
           this.style.background = '#16a34a';
         } else {
-          this.textContent = `Error: ${response?.error || 'failed'}`;
+          this.textContent = 'Error — try again';
           this.disabled = false;
         }
       }
     );
   });
 
-  return banner;
+  return wrap;
 }
 
 // ── Analysis ──────────────────────────────────────────────────────────────────
@@ -208,43 +184,30 @@ function analyzeEmailContainer(container) {
   if (container.hasAttribute(ANALYZED_ATTR)) return;
   container.setAttribute(ANALYZED_ATTR, '1');
 
+  const emailData = parseGmailEmail(container);
+  if (!emailData.sender && !emailData.body_text) return;
+
   const loading = document.createElement('div');
   loading.className = 'phishguard-loading';
-  loading.innerHTML = '<div class="phishguard-loading-dot"></div> PhishGuard is analyzing this email...';
+  loading.innerHTML = '<div class="phishguard-loading-dot"></div> PhishGuard analyzing...';
   container.insertBefore(loading, container.firstChild);
 
-  const emailData = parseGmailEmail(container);
-  if (!emailData.sender && !emailData.body_text) {
-    loading.remove();
-    return;
-  }
-
   chrome.runtime.sendMessage(
-    {
-      type: 'ANALYZE_EMAIL',
-      data: {
-        sender:    emailData.sender,
-        reply_to:  emailData.reply_to,
-        subject:   emailData.subject,
-        body_text: emailData.body_text,
-        body_html: emailData.body_html,
-      },
-    },
+    { type: 'ANALYZE_EMAIL', data: { sender: emailData.sender, reply_to: emailData.reply_to, subject: emailData.subject, body_text: emailData.body_text, body_html: emailData.body_html } },
     (response) => {
       loading.remove();
       if (response?.result) {
         currentScan      = response.result;
         currentEmailData = emailData;
 
-        // Check if admin already deleted this email before showing the normal banner
         chrome.storage.local.get(['deletedEmails', 'ackedDeletions'], ({ deletedEmails = [], ackedDeletions = [] }) => {
-          const match = deletedEmails.find(d => emailMatchesDeletion(emailData, d));
+          const match = deletedEmails.find(d => matchesDeletion(emailData, d));
           if (match && !ackedDeletions.includes(match.id)) {
-            createDeletionBanner(container);
+            replaceBannerWithDeletion(container);
             attemptGmailDelete();
             chrome.storage.local.set({ ackedDeletions: [...ackedDeletions, match.id] });
           } else {
-            const banner = createBanner(response.result, emailData, container);
+            const banner = createBanner(response.result, emailData);
             container.insertBefore(banner, container.firstChild);
           }
         });
@@ -257,10 +220,8 @@ function analyzeEmailContainer(container) {
 
 function scanForEmails() {
   currentUserEmail = getUserEmail();
-  const containers = document.querySelectorAll('.adn.ads:not([data-phishguard-analyzed]), .gs:not([data-phishguard-analyzed])');
-  containers.forEach((el) => {
-    if (el.querySelector('.a3s')) analyzeEmailContainer(el);
-  });
+  document.querySelectorAll('.adn.ads:not([data-phishguard-analyzed]), .gs:not([data-phishguard-analyzed])')
+    .forEach(el => { if (el.querySelector('.a3s')) analyzeEmailContainer(el); });
 }
 
 const observer = new MutationObserver(() => scanForEmails());

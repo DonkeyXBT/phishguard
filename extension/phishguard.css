@@ -1,129 +1,187 @@
 /* ── PhishGuard in-page banner ─────────────────────────────────────────────── */
 
 @keyframes pg-slide-in {
-  from { opacity: 0; transform: translateY(-6px); }
+  from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+@keyframes pg-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1; }
+}
 
-.phishguard-banner {
+/* ── Loading bar ── */
+.phishguard-loading {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 14px 16px;
-  border-radius: 12px;
-  margin: 0 0 14px 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  margin: 6px 0 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  font-size: 12px;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  width: fit-content;
+  animation: pg-slide-in 0.15s ease;
+}
+.phishguard-loading-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #3b82f6;
+  flex-shrink: 0;
+  animation: pg-pulse 1.2s ease-in-out infinite;
+}
+
+/* ── Wrapper ── */
+.phishguard-wrap {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
   font-size: 13px;
-  line-height: 1.45;
-  border: 1px solid;
+  margin: 6px 0 10px;
+  animation: pg-slide-in 0.2s ease;
   position: relative;
   z-index: 9999;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-  animation: pg-slide-in 0.2s ease;
 }
 
-/* ── Risk level colour themes ─ */
-.phishguard-banner.pg-low {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-  border-color: #86efac;
-  color: #14532d;
+/* ── Header bar (always visible) ── */
+.phishguard-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 10px;
+  border-radius: 20px;
+  border: 1px solid;
+  cursor: default;
+  user-select: none;
+  max-width: 100%;
+  line-height: 1;
 }
-.phishguard-banner.pg-medium {
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+
+/* Safe — non-interactive pill */
+.phishguard-bar.pg-low {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #15803d;
+}
+
+/* Warning levels — clickable to expand */
+.phishguard-bar.pg-medium {
+  background: #fffbeb;
+  border-color: #fcd34d;
+  color: #92400e;
+  cursor: pointer;
+}
+.phishguard-bar.pg-medium:hover { background: #fef3c7; }
+
+.phishguard-bar.pg-high {
+  background: #fff7ed;
+  border-color: #fdba74;
+  color: #9a3412;
+  cursor: pointer;
+}
+.phishguard-bar.pg-high:hover { background: #ffedd5; }
+
+.phishguard-bar.pg-critical {
+  background: #fff1f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+  cursor: pointer;
+}
+.phishguard-bar.pg-critical:hover { background: #ffe4e6; }
+
+/* Admin-deleted */
+.phishguard-bar.pg-deleted {
+  background: #f5f3ff;
+  border-color: #c4b5fd;
+  color: #5b21b6;
+  cursor: default;
+}
+
+.phishguard-bar-icon { font-size: 13px; flex-shrink: 0; }
+.phishguard-bar-label { font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+.phishguard-bar-score {
+  font-size: 11px; opacity: 0.65; font-weight: 500; white-space: nowrap;
+}
+.phishguard-bar-toggle {
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: 0.55;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.phishguard-wrap.open .phishguard-bar-toggle { transform: rotate(180deg); }
+
+.phishguard-bar-close {
+  margin-left: 6px;
+  width: 16px; height: 16px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0.4;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: none; background: none; color: inherit; padding: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+.phishguard-bar-close:hover { opacity: 0.9; background: rgba(0,0,0,0.08); }
+
+/* ── Expandable details panel ── */
+.phishguard-details {
+  display: none;
+  margin-top: 6px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid;
+  animation: pg-slide-in 0.15s ease;
+}
+.phishguard-wrap.open .phishguard-details { display: block; }
+
+.phishguard-details.pg-medium {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
   border-color: #fcd34d;
   color: #78350f;
 }
-.phishguard-banner.pg-high {
-  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+.phishguard-details.pg-high {
+  background: linear-gradient(135deg, #fff7ed, #ffedd5);
   border-color: #fdba74;
   color: #7c2d12;
 }
-.phishguard-banner.pg-critical {
-  background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+.phishguard-details.pg-critical {
+  background: linear-gradient(135deg, #fff1f2, #ffe4e6);
   border-color: #fca5a5;
   color: #7f1d1d;
 }
-
-/* ── Left accent bar ── */
-.phishguard-banner::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 10%; bottom: 10%;
-  width: 3px;
-  border-radius: 0 2px 2px 0;
-}
-.phishguard-banner.pg-low::before    { background: #22c55e; }
-.phishguard-banner.pg-medium::before { background: #f59e0b; }
-.phishguard-banner.pg-high::before   { background: #f97316; }
-.phishguard-banner.pg-critical::before { background: #ef4444; }
-
-/* ── Icon ── */
-.phishguard-icon {
-  font-size: 22px;
-  flex-shrink: 0;
-  margin-top: 1px;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
+.phishguard-details.pg-deleted {
+  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+  border-color: #c4b5fd;
+  color: #4c1d95;
 }
 
-/* ── Content ── */
-.phishguard-content { flex: 1; min-width: 0; }
-
-.phishguard-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 4px;
+.phishguard-desc {
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin-bottom: 10px;
+  font-weight: 500;
 }
 
-.phishguard-title {
-  font-weight: 700;
-  font-size: 13.5px;
-  letter-spacing: -0.01em;
-}
-
-.phishguard-score-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 700;
-  flex-shrink: 0;
-  letter-spacing: 0.02em;
-}
-.pg-low    .phishguard-score-pill { background: rgba(34,197,94,0.18);  color: #15803d; }
-.pg-medium .phishguard-score-pill { background: rgba(245,158,11,0.18); color: #b45309; }
-.pg-high   .phishguard-score-pill { background: rgba(249,115,22,0.18); color: #c2410c; }
-.pg-critical .phishguard-score-pill { background: rgba(239,68,68,0.18); color: #b91c1c; }
-
-.phishguard-sub {
-  font-size: 11.5px;
-  opacity: 0.75;
-  margin-bottom: 8px;
-}
-
-/* ── Signal tags ── */
 .phishguard-signals {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 .phishguard-signal-tag {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11.5px;
   font-weight: 500;
-  background: rgba(0,0,0,0.07);
-  border: 1px solid rgba(0,0,0,0.06);
+  background: rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.07);
 }
 
-/* ── Action buttons ── */
 .phishguard-actions {
   display: flex;
   gap: 7px;
@@ -134,94 +192,30 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 5px 12px;
+  padding: 6px 14px;
   border-radius: 7px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   border: none;
   transition: all 0.15s;
-  letter-spacing: 0.01em;
+  font-family: inherit;
 }
-.phishguard-btn:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
+.phishguard-btn:disabled { opacity: 0.5; cursor: default; }
 
 .phishguard-btn-report {
   background: #dc2626;
   color: #fff;
-  box-shadow: 0 1px 4px rgba(220,38,38,0.3);
+  box-shadow: 0 1px 3px rgba(220,38,38,0.3);
 }
 .phishguard-btn-report:hover:not(:disabled) {
   background: #b91c1c;
-  box-shadow: 0 2px 8px rgba(220,38,38,0.4);
   transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(220,38,38,0.35);
 }
-
 .phishguard-btn-dismiss {
   background: rgba(0,0,0,0.07);
   color: inherit;
-  border: 1px solid rgba(0,0,0,0.09);
+  border: 1px solid rgba(0,0,0,0.1);
 }
-.phishguard-btn-dismiss:hover {
-  background: rgba(0,0,0,0.13);
-}
-
-/* ── Close button ── */
-.phishguard-close {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  width: 22px; height: 22px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  font-size: 15px;
-  opacity: 0.4;
-  background: none;
-  border: none;
-  color: inherit;
-  padding: 0;
-  border-radius: 50%;
-  transition: opacity 0.15s, background 0.15s;
-}
-.phishguard-close:hover { opacity: 0.9; background: rgba(0,0,0,0.08); }
-
-/* ── Admin-deleted banner ── */
-.phishguard-banner.pg-deleted {
-  background: linear-gradient(135deg, #1a0a2e 0%, #2d1a4a 100%);
-  border-color: #7c3aed55;
-  color: #e9d5ff;
-}
-.phishguard-banner.pg-deleted::before { background: linear-gradient(90deg, #7c3aed, #6d28d9); }
-.pg-deleted .phishguard-score-pill { background: rgba(124,58,237,0.2); color: #c4b5fd; }
-.pg-deleted .phishguard-signal-tag { background: rgba(124,58,237,0.15); border-color: rgba(124,58,237,0.2); color: #ddd6fe; }
-
-/* ── Loading state ── */
-@keyframes pg-pulse {
-  0%, 100% { opacity: 0.5; }
-  50%       { opacity: 1; }
-}
-
-.phishguard-loading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 12px;
-  color: #64748b;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  margin-bottom: 10px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-
-.phishguard-loading-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: #3b82f6;
-  animation: pg-pulse 1.4s ease-in-out infinite;
-  flex-shrink: 0;
-}
+.phishguard-btn-dismiss:hover { background: rgba(0,0,0,0.13); }
