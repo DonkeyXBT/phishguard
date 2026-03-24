@@ -1,4 +1,4 @@
-const DEFAULT_API_URL = 'https://phishguard.vercel.app';
+const DEFAULT_API_URL = 'https://phishing-detector-orpin-ten.vercel.app';
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'ANALYZE_EMAIL') { handleAnalyze(message.data, sendResponse); return true }
