@@ -95,6 +95,17 @@ model EmailAttachment {
   @@map("email_attachments")
 }
 
+model DomainList {
+  id        String   @id @default(cuid())
+  domain    String
+  listType  String   @map("list_type")   // "whitelist" | "blacklist"
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([domain, listType])
+  @@map("domain_lists")
+}
+
 model AdminAction {
   id        String   @id @default(cuid())
   reportId  String   @map("report_id")

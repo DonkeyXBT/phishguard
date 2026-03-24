@@ -18,6 +18,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
     { href: '/queue', label: 'Review Queue', icon: '📥' },
     { href: '/organizations', label: 'Organizations', icon: '🏢' },
+    { href: '/domains',       label: 'Domain Lists',  icon: '🌐' },
   ]
 
   return (

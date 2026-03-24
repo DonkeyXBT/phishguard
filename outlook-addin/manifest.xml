@@ -15,8 +15,8 @@
   <Description DefaultValue="Real-time phishing detection for Outlook. Automatically analyzes emails and lets users report suspicious messages to the security team."/>
 
   <!-- Icons (Office requires PNG; replace .svg with .png for production) -->
-  <IconUrl DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon.svg"/>
-  <HighResolutionIconUrl DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon.svg"/>
+  <IconUrl DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon80.png"/>
   <SupportUrl DefaultValue="https://phishing-detector-orpin-ten.vercel.app"/>
 
   <!-- Allowed domains -->
@@ -102,9 +102,9 @@
 
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon.svg"/>
-        <bt:Image id="Icon.32"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon.svg"/>
-        <bt:Image id="Icon.80"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon.svg"/>
+        <bt:Image id="Icon.16"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon16.png"/>
+        <bt:Image id="Icon.32"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon32.png"/>
+        <bt:Image id="Icon.80"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon80.png"/>
       </bt:Images>
       <bt:Urls>
         <bt:Url id="Commands.Url"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/commands.html"/>

@@ -34,7 +34,11 @@ export const api = {
     const qs = params ? '?' + new URLSearchParams(params).toString() : ''
     return request(`/api/admin/queue${qs}`)
   },
-  getReport: (id: string) => request(`/api/admin/reports/${id}`),
+  getReport:   (id: string) => request(`/api/admin/reports/${id}`),
+  getDomains:  () => request('/api/admin/domains'),
+  addDomain:   (domain: string, listType: string, reason?: string) =>
+    request('/api/admin/domains', { method: 'POST', body: JSON.stringify({ domain, listType, reason }) }),
+  removeDomain: (id: string) => request(`/api/admin/domains/${id}`, { method: 'DELETE' }),
   reviewReport: (id: string, action: string, notes?: string) =>
     request(`/api/admin/reports/${id}/review`, { method: 'PUT', body: JSON.stringify({ action, notes }) }),
 }
