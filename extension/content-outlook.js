@@ -2,12 +2,13 @@ const ANALYZED_ATTR  = 'data-phishguard-analyzed';
 let currentScan      = null;
 let currentEmailData = null;
 
-// ── Popup message handler ─────────────────────────────────────────────────────
+// ── Message handler ───────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'GET_CURRENT_SCAN') {
     sendResponse({ scan: currentScan, emailData: currentEmailData });
     return true;
   }
+
   if (message.type === 'REPORT_CURRENT_EMAIL') {
     if (!currentEmailData) { sendResponse({ ok: false, error: 'No email data' }); return true; }
     chrome.runtime.sendMessage(
@@ -29,8 +30,73 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     );
     return true;
   }
+
+  if (message.type === 'DELETIONS_UPDATED') {
+    if (currentEmailData) checkAndHandleDeletion(currentEmailData);
+    return true;
+  }
 });
 
+// ── Deletion handling ─────────────────────────────────────────────────────────
+function emailMatchesDeletion(emailData, deletion) {
+  const norm = s => (s || '').toLowerCase().trim();
+  return norm(emailData.subject) === norm(deletion.subject) &&
+         norm(emailData.sender)  === norm(deletion.sender);
+}
+
+function createDeletionBanner(container) {
+  const existing = container.querySelector('.phishguard-banner, .phishguard-loading');
+  if (existing) existing.remove();
+
+  const banner = document.createElement('div');
+  banner.className = 'phishguard-banner pg-deleted';
+  banner.style.margin = '10px 16px 4px';
+  banner.innerHTML = `
+    <div class="phishguard-icon">⛔</div>
+    <div class="phishguard-content">
+      <div class="phishguard-header">
+        <span class="phishguard-title">Removed by Security Team</span>
+        <span class="phishguard-score-pill">Confirmed Phishing</span>
+      </div>
+      <div class="phishguard-sub">Your IT security team reviewed this email and confirmed it is phishing. It has been moved to trash.</div>
+      <div class="phishguard-signals">
+        <span class="phishguard-signal-tag">🛡️ Admin reviewed</span>
+        <span class="phishguard-signal-tag">🗑️ Moved to trash</span>
+      </div>
+    </div>
+  `;
+  container.insertBefore(banner, container.firstChild);
+}
+
+function attemptOutlookDelete() {
+  const selectors = [
+    '[title="Delete"]',
+    '[aria-label="Delete"]',
+    '[data-icon-name="Delete"]',
+  ];
+  for (const sel of selectors) {
+    const btn = document.querySelector(sel);
+    if (btn) { btn.click(); return true; }
+  }
+  return false;
+}
+
+function checkAndHandleDeletion(emailData) {
+  chrome.storage.local.get(['deletedEmails', 'ackedDeletions'], ({ deletedEmails = [], ackedDeletions = [] }) => {
+    const match = deletedEmails.find(d => emailMatchesDeletion(emailData, d));
+    if (!match || ackedDeletions.includes(match.id)) return;
+
+    const container = document.querySelector('[class*="ReadingPaneContent"][data-phishguard-analyzed]');
+    if (!container) return;
+
+    createDeletionBanner(container);
+    attemptOutlookDelete();
+
+    chrome.storage.local.set({ ackedDeletions: [...ackedDeletions, match.id] });
+  });
+}
+
+// ── Email parsing ─────────────────────────────────────────────────────────────
 function parseOutlookEmail(container) {
   const subjectEl = document.querySelector('[role="heading"][class*="subject"], .allowTextSelection span[dir]');
   const subject = subjectEl?.textContent?.trim() || '';
@@ -45,6 +111,7 @@ function parseOutlookEmail(container) {
   return { subject, sender, reply_to: '', body_text: bodyText, body_html: bodyHtml };
 }
 
+// ── Banner creation ───────────────────────────────────────────────────────────
 function createBanner(result, emailData, container) {
   const existing = container.querySelector('.phishguard-banner, .phishguard-loading');
   if (existing) existing.remove();
@@ -84,19 +151,18 @@ function createBanner(result, emailData, container) {
   `;
 
   banner.querySelector('#pg-dismiss-btn')?.addEventListener('click', () => banner.remove());
-  banner.querySelector('#pg-close-btn')?.addEventListener('click', () => banner.remove());
+  banner.querySelector('#pg-close-btn')?.addEventListener('click',   () => banner.remove());
 
-  const reportBtn = banner.querySelector('#pg-report-btn');
-  reportBtn?.addEventListener('click', () => {
-    reportBtn.textContent = 'Reporting...';
-    reportBtn.disabled = true;
+  banner.querySelector('#pg-report-btn')?.addEventListener('click', function () {
+    this.textContent = 'Reporting...';
+    this.disabled = true;
     chrome.runtime.sendMessage(
       {
         type: 'REPORT_EMAIL',
         data: {
-          reporter_email: 'user@company.com',
-          subject: emailData.subject,
-          sender: emailData.sender,
+          reporter_email:  'user@company.com',
+          subject:         emailData.subject,
+          sender:          emailData.sender,
           email_body_text: emailData.body_text,
           email_body_html: emailData.body_html,
           source: 'user_report',
@@ -104,11 +170,11 @@ function createBanner(result, emailData, container) {
       },
       (response) => {
         if (response?.result) {
-          reportBtn.textContent = '✅ Reported to Admin';
-          reportBtn.style.background = '#16a34a';
+          this.textContent = '✅ Reported to Admin';
+          this.style.background = '#16a34a';
         } else {
-          reportBtn.textContent = `Error`;
-          reportBtn.disabled = false;
+          this.textContent = 'Error';
+          this.disabled = false;
         }
       }
     );
@@ -117,6 +183,7 @@ function createBanner(result, emailData, container) {
   return banner;
 }
 
+// ── Analysis ──────────────────────────────────────────────────────────────────
 function analyzeEmailContainer(container) {
   if (container.hasAttribute(ANALYZED_ATTR)) return;
   container.setAttribute(ANALYZED_ATTR, '1');
@@ -145,8 +212,18 @@ function analyzeEmailContainer(container) {
       if (response?.result) {
         currentScan      = response.result;
         currentEmailData = emailData;
-        const banner = createBanner(response.result, emailData, container);
-        container.insertBefore(banner, container.firstChild);
+
+        chrome.storage.local.get(['deletedEmails', 'ackedDeletions'], ({ deletedEmails = [], ackedDeletions = [] }) => {
+          const match = deletedEmails.find(d => emailMatchesDeletion(emailData, d));
+          if (match && !ackedDeletions.includes(match.id)) {
+            createDeletionBanner(container);
+            attemptOutlookDelete();
+            chrome.storage.local.set({ ackedDeletions: [...ackedDeletions, match.id] });
+          } else {
+            const banner = createBanner(response.result, emailData, container);
+            container.insertBefore(banner, container.firstChild);
+          }
+        });
       }
     }
   );

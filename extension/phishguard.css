@@ -187,6 +187,16 @@
 }
 .phishguard-close:hover { opacity: 0.9; background: rgba(0,0,0,0.08); }
 
+/* ── Admin-deleted banner ── */
+.phishguard-banner.pg-deleted {
+  background: linear-gradient(135deg, #1a0a2e 0%, #2d1a4a 100%);
+  border-color: #7c3aed55;
+  color: #e9d5ff;
+}
+.phishguard-banner.pg-deleted::before { background: linear-gradient(90deg, #7c3aed, #6d28d9); }
+.pg-deleted .phishguard-score-pill { background: rgba(124,58,237,0.2); color: #c4b5fd; }
+.pg-deleted .phishguard-signal-tag { background: rgba(124,58,237,0.15); border-color: rgba(124,58,237,0.2); color: #ddd6fe; }
+
 /* ── Loading state ── */
 @keyframes pg-pulse {
   0%, 100% { opacity: 0.5; }

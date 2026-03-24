@@ -3,7 +3,7 @@
   "name": "PhishGuard",
   "version": "1.0.0",
   "description": "Real-time phishing detection for Gmail and Outlook",
-  "permissions": ["storage", "activeTab", "scripting"],
+  "permissions": ["storage", "activeTab", "scripting", "alarms", "tabs"],
   "host_permissions": [
     "https://mail.google.com/*",
     "https://outlook.live.com/*",
