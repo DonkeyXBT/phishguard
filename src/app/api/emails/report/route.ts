@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       replyTo: body.reply_to,
       bodyText: body.email_body_text,
       bodyHtml: body.email_body_html,
-      headers: body.headers ?? {},
+      headers: body.raw_headers ? { raw: body.raw_headers } : (body.headers ?? {}),
       riskScore: result.riskScore,
       riskLevel: result.riskLevel,
       signals: result.signals as unknown as import('@prisma/client').Prisma.InputJsonValue,

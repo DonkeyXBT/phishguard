@@ -4,5 +4,11 @@
   "installCommand": "npm install",
   "env": {
     "NEXT_TELEMETRY_DISABLED": "1"
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/admin/threat-intel/sync",
+      "schedule": "0 2 * * *"
+    }
+  ]
 }

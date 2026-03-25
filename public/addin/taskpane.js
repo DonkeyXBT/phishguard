@@ -144,7 +144,18 @@ function analyzeCurrentEmail() {
     tmp.innerHTML = bodyHtml;
     const bodyText = tmp.innerText || tmp.textContent || '';
 
-    currentEmail = { subject, sender, senderEmail, bodyText, bodyHtml };
+    // Capture internet headers for SPF/DKIM/DMARC analysis (Outlook only)
+    let rawHeaders = '';
+    if (item.getAllInternetHeadersAsync) {
+      await new Promise(resolve => {
+        item.getAllInternetHeadersAsync(r => {
+          if (r.status === Office.AsyncResultStatus.Succeeded) rawHeaders = r.value || '';
+          resolve(null);
+        });
+      });
+    }
+
+    currentEmail = { subject, sender, senderEmail, bodyText, bodyHtml, rawHeaders };
 
     // Update meta display
     $('meta-sender').textContent  = sender  || '—';
@@ -252,6 +263,7 @@ $('reportBtn').addEventListener('click', async () => {
         sender:          currentEmail.sender,
         email_body_text: currentEmail.bodyText,
         email_body_html: currentEmail.bodyHtml,
+        raw_headers:     currentEmail.rawHeaders,
         source:          'outlook_addin',
       }),
     });

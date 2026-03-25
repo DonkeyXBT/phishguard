@@ -99,6 +99,7 @@ model DomainList {
   id        String   @id @default(cuid())
   domain    String
   listType  String   @map("list_type")   // "whitelist" | "blacklist"
+  source    String   @default("manual")  // "manual" | "openphish" | "phishtank"
   reason    String?
   createdAt DateTime @default(now()) @map("created_at")
 

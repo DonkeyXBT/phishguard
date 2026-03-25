@@ -38,7 +38,8 @@ export const api = {
   getDomains:  () => request('/api/admin/domains'),
   addDomain:   (domain: string, listType: string, reason?: string) =>
     request('/api/admin/domains', { method: 'POST', body: JSON.stringify({ domain, listType, reason }) }),
-  removeDomain: (id: string) => request(`/api/admin/domains/${id}`, { method: 'DELETE' }),
+  removeDomain:   (id: string) => request(`/api/admin/domains/${id}`, { method: 'DELETE' }),
+  syncThreatIntel: () => request('/api/admin/threat-intel/sync', { method: 'POST' }),
   reviewReport: (id: string, action: string, notes?: string) =>
     request(`/api/admin/reports/${id}/review`, { method: 'PUT', body: JSON.stringify({ action, notes }) }),
 }

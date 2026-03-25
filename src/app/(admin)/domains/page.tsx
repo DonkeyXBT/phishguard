@@ -7,6 +7,7 @@ interface DomainEntry {
   id: string
   domain: string
   listType: 'whitelist' | 'blacklist'
+  source: string
   reason: string | null
   createdAt: string
 }
@@ -66,9 +67,16 @@ function AddForm({ listType, onAdded }: { listType: 'whitelist' | 'blacklist'; o
   )
 }
 
+const SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
+  openphish: { label: 'OpenPhish', cls: 'bg-orange-900/50 text-orange-400 border-orange-800/40' },
+  phishtank: { label: 'PhishTank', cls: 'bg-yellow-900/50 text-yellow-400 border-yellow-800/40' },
+  manual:    { label: 'Manual',    cls: 'bg-gray-800 text-gray-400 border-gray-700' },
+}
+
 function DomainChip({ entry, onRemove }: { entry: DomainEntry; onRemove: () => void }) {
   const [removing, setRemoving] = useState(false)
   const isWhite = entry.listType === 'whitelist'
+  const srcBadge = SOURCE_BADGE[entry.source] ?? SOURCE_BADGE.manual
 
   const remove = async () => {
     if (!confirm(`Remove ${entry.domain} from the ${entry.listType}?`)) return
@@ -81,9 +89,14 @@ function DomainChip({ entry, onRemove }: { entry: DomainEntry; onRemove: () => v
     <div className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border text-sm ${
       isWhite ? 'bg-emerald-950/40 border-emerald-800/40' : 'bg-red-950/40 border-red-800/40'
     }`}>
-      <div className="min-w-0">
-        <div className={`font-mono font-semibold truncate ${isWhite ? 'text-emerald-300' : 'text-red-300'}`}>
-          {entry.domain}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className={`font-mono font-semibold truncate ${isWhite ? 'text-emerald-300' : 'text-red-300'}`}>
+            {entry.domain}
+          </span>
+          <span className={`text-xs px-1.5 py-0.5 rounded border font-medium flex-shrink-0 ${srcBadge.cls}`}>
+            {srcBadge.label}
+          </span>
         </div>
         {entry.reason && <div className="text-xs text-gray-500 truncate mt-0.5">{entry.reason}</div>}
       </div>
@@ -144,14 +157,36 @@ export default function DomainsPage() {
   const [whitelist, setWhitelist] = useState<DomainEntry[]>([])
   const [blacklist, setBlacklist] = useState<DomainEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [syncResult, setSyncResult] = useState<{ total_added: number; synced_at: string; sources: Record<string, { added: number; error?: string }> } | null>(null)
+  const [syncError, setSyncError] = useState('')
 
-  useEffect(() => {
+  const load = () =>
     api.getDomains().then(r => r.json()).then(data => {
       setWhitelist(data.whitelist ?? [])
       setBlacklist(data.blacklist ?? [])
       setLoading(false)
     })
-  }, [])
+
+  useEffect(() => { load() }, [])
+
+  const syncIntel = async () => {
+    setSyncing(true)
+    setSyncError('')
+    setSyncResult(null)
+    try {
+      const res = await api.syncThreatIntel()
+      const data = await res.json()
+      if (!res.ok) { setSyncError(data.error ?? 'Sync failed'); return }
+      setSyncResult(data)
+      // Reload blacklist to show newly imported domains
+      load()
+    } catch {
+      setSyncError('Cannot reach server')
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const addTo = (type: 'whitelist' | 'blacklist') => (entry: DomainEntry) => {
     if (type === 'whitelist') setWhitelist(p => [...p, entry])
@@ -165,12 +200,39 @@ export default function DomainsPage() {
 
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Domain Lists</h1>
-        <p className="text-gray-400 text-sm mt-1">
-          Whitelisted domains are always treated as safe. Blacklisted domains always trigger a critical alert.
-          Both override the automatic phishing analysis.
-        </p>
+      <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Domain Lists</h1>
+          <p className="text-gray-400 text-sm mt-1">
+            Whitelisted domains are always treated as safe. Blacklisted domains always trigger a critical alert.
+            Both override the automatic phishing analysis.
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <button
+            onClick={syncIntel}
+            disabled={syncing}
+            className="flex items-center gap-2 bg-blue-700 hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-semibold rounded-lg px-4 py-2 transition-colors"
+          >
+            {syncing ? (
+              <><span className="animate-spin">↻</span> Syncing...</>
+            ) : (
+              <><span>🛡️</span> Sync Threat Intel</>
+            )}
+          </button>
+          {syncResult && (
+            <div className="text-xs text-emerald-400 text-right">
+              ✅ Added {syncResult.total_added} domains &middot;{' '}
+              {Object.entries(syncResult.sources).map(([src, r]) => (
+                <span key={src} className="ml-1">
+                  {src}: <span className="font-semibold">{r.added}</span>
+                  {r.error && <span className="text-red-400"> (err)</span>}
+                </span>
+              ))}
+            </div>
+          )}
+          {syncError && <div className="text-xs text-red-400">{syncError}</div>}
+        </div>
       </div>
 
       {loading ? (

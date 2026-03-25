@@ -6,6 +6,7 @@ import { api } from '@/lib/api'
 import RiskBadge from '@/components/RiskBadge'
 import StatusBadge from '@/components/StatusBadge'
 import SignalsList from '@/components/SignalsList'
+import { parseHeaders, authLabel, authColor } from '@/lib/headers'
 
 interface Link { id: string; displayText: string | null; url: string | null; domain: string | null; isSuspicious: boolean; riskReason: string | null }
 interface Attachment { id: string; filename: string | null; contentType: string | null; isSuspicious: boolean; riskReason: string | null }
@@ -15,11 +16,12 @@ interface Report {
   senderDomain: string | null; replyTo: string | null; recipientEmail: string | null
   bodyText: string | null; bodyHtml: string | null; riskScore: number
   riskLevel: 'low' | 'medium' | 'high' | 'critical'; signals: any[]
+  headers: Record<string, unknown>
   status: string; source: string; reportedAt: string; reviewedAt: string | null
   adminNotes: string | null; links: Link[]; attachments: Attachment[]; actions: Action[]
 }
 
-type Tab = 'overview' | 'body' | 'links' | 'attachments' | 'history'
+type Tab = 'overview' | 'body' | 'links' | 'attachments' | 'headers' | 'history'
 
 function fmt(d: string) {
   return new Date(d).toLocaleString()
@@ -51,11 +53,15 @@ export default function EmailDetailPage() {
 
   if (!report) return <div className="p-8 text-center text-gray-500">Loading...</div>
 
+  const rawHeaders = (report.headers as any)?.raw as string | undefined
+  const headerAnalysis = rawHeaders ? parseHeaders(rawHeaders) : null
+
   const tabs: { key: Tab; label: string }[] = [
     { key: 'overview', label: 'Overview' },
     { key: 'body', label: 'Body' },
     { key: 'links', label: `Links (${report.links.length})` },
     { key: 'attachments', label: `Attachments (${report.attachments.length})` },
+    { key: 'headers', label: 'Headers' },
     { key: 'history', label: 'History' },
   ]
 
@@ -154,6 +160,60 @@ export default function EmailDetailPage() {
               {a.isSuspicious && <div className="text-red-400 text-xs mt-1 font-semibold">⚠ {a.riskReason}</div>}
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === 'headers' && (
+        <div className="space-y-5">
+          {!headerAnalysis ? (
+            <div className="bg-gray-900 rounded-xl border border-gray-800 p-8 text-center text-gray-500 text-sm">
+              No header data available. Headers are captured by the Outlook Add-in only.
+            </div>
+          ) : (
+            <>
+              <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+                <h3 className="font-semibold text-white mb-4">Email Authentication</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  {([
+                    { label: 'SPF',   result: headerAnalysis.spf,   details: headerAnalysis.spfDetails },
+                    { label: 'DKIM',  result: headerAnalysis.dkim,  details: headerAnalysis.dkimDetails },
+                    { label: 'DMARC', result: headerAnalysis.dmarc, details: headerAnalysis.dmarcDetails },
+                  ] as const).map(({ label, result, details }) => (
+                    <div key={label} className={`rounded-lg border p-4 ${
+                      result === 'pass' ? 'border-emerald-800/60 bg-emerald-950/30'
+                      : result === 'fail' || result === 'softfail' ? 'border-red-800/60 bg-red-950/30'
+                      : 'border-gray-700 bg-gray-800/30'
+                    }`}>
+                      <div className="text-xs text-gray-500 uppercase tracking-widest mb-1 font-semibold">{label}</div>
+                      <div className={`text-base font-bold ${authColor(result)}`}>{authLabel(result)}</div>
+                      {details && <div className="text-xs text-gray-500 mt-1.5 font-mono break-all">{details}</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {headerAnalysis.receivedHops.length > 0 && (
+                <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+                  <h3 className="font-semibold text-white mb-4">Received Hops ({headerAnalysis.receivedHops.length})</h3>
+                  <div className="space-y-2">
+                    {headerAnalysis.receivedHops.map((hop, i) => (
+                      <div key={i} className="flex items-center gap-3 text-sm">
+                        <span className="text-gray-600 text-xs w-5 text-right shrink-0">{i + 1}</span>
+                        <span className="text-gray-400 font-mono text-xs bg-gray-800 px-2 py-1 rounded">{hop}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+                <h3 className="font-semibold text-white mb-3">Raw Headers</h3>
+                <pre className="text-xs text-gray-400 font-mono bg-gray-800 rounded-lg p-4 max-h-72 overflow-auto whitespace-pre-wrap break-all">
+                  {headerAnalysis.raw}
+                </pre>
+              </div>
+            </>
+          )}
         </div>
       )}
 

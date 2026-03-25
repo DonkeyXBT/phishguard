@@ -36,13 +36,13 @@ export async function POST(req: NextRequest) {
     if (listed?.listType === 'whitelist') {
       result.riskScore = 0
       result.riskLevel = 'low'
-      result.signals   = [{ label: 'Whitelisted domain', severity: 'info', description: `${domain} is on your organization's trusted domain list.` }]
+      result.signals   = [{ code: 'domain_whitelisted', label: 'Whitelisted domain', severity: 'info', description: `${domain} is on your organization's trusted domain list.`, detail: domain, score: 0 }]
       result.summary   = `${domain} is on your organization's whitelist — email treated as safe.`
     } else if (listed?.listType === 'blacklist') {
       result.riskScore = 100
       result.riskLevel = 'critical'
       result.signals   = [
-        { label: 'Blacklisted domain', severity: 'critical', description: `${domain} is on your organization's blocked domain list.` },
+        { code: 'domain_blacklisted', label: 'Blacklisted domain', severity: 'critical', description: `${domain} is on your organization's blocked domain list.`, detail: domain, score: 100 },
         ...result.signals,
       ]
       result.summary = `${domain} is on your organization's blacklist — treat this email as phishing.`
