@@ -2,7 +2,20 @@
 
 'use strict';
 
-const DEFAULT_URL = window.location.origin; // same Vercel deployment
+// Derive the server origin robustly — window.location.origin can be
+// unreliable in Outlook desktop's embedded WebView (returns undefined/null).
+const DEFAULT_URL = (function () {
+  try {
+    const o = window.location.origin;
+    if (o && o.startsWith('https://')) return o;
+  } catch (_) {}
+  // Fallback: parse from the full href
+  try {
+    const m = window.location.href.match(/^(https:\/\/[^/]+)/);
+    if (m) return m[1];
+  } catch (_) {}
+  return 'https://phishing-detector-orpin-ten.vercel.app';
+}());
 
 let apiBase        = DEFAULT_URL;
 let currentEmail   = null;
@@ -170,12 +183,18 @@ function analyzeCurrentEmail() {
         body: JSON.stringify({ sender, subject, body_text: bodyText, body_html: bodyHtml }),
       });
 
-      const data = await res.json();
-      if (!res.ok) { showError(data.error || 'Analysis failed. Check your API key.'); return; }
+      if (!res.ok) {
+        let msg = 'Analysis failed. Check your API key.';
+        try { const d = await res.json(); msg = d.error || msg; } catch (_) {}
+        showError(msg + ` (HTTP ${res.status})`);
+        return;
+      }
 
+      const data = await res.json();
       showResult(data);
-    } catch {
-      showError('Cannot reach PhishGuard server. Check the Server URL in settings.');
+    } catch (e) {
+      const detail = (e && e.message) ? ` (${e.message})` : '';
+      showError('Cannot reach PhishGuard server. Check the Server URL in settings.' + detail);
     }
   });
 }
