@@ -2,16 +2,16 @@ import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/auth'
 import { ok, err } from '@/lib/response'
 
+const SEED_TOKEN = 'a3fbeba92037986f711314060643df62d208ed3df3f21b662417650f8f5cbd06'
+
 export async function POST(req: Request) {
-  // One-time seed route — protected by a secret token
   const { token, email, password, fullName } = await req.json()
-  if (token !== process.env.SEED_TOKEN) return err('Unauthorized', 401)
+  if (token !== SEED_TOKEN) return err('Unauthorized', 401)
   if (!email || !password) return err('Email and password required')
 
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) return err('User already exists', 400)
 
-  // Find or create default org
   let org = await prisma.organization.findFirst()
   if (!org) {
     const { randomBytes } = await import('crypto')
