@@ -2,6 +2,23 @@ const ANALYZED_ATTR = 'data-phishguard-analyzed';
 let currentScan      = null;
 let currentEmailData = null;
 let analyzing        = false;
+let contextValid     = true;
+
+// Guard against extension context invalidation (happens after extension reload)
+function safeSendMessage(msg, cb) {
+  if (!contextValid) return;
+  try {
+    chrome.runtime.sendMessage(msg, response => {
+      if (chrome.runtime.lastError) {
+        contextValid = false;
+        return;
+      }
+      if (cb) cb(response);
+    });
+  } catch {
+    contextValid = false;
+  }
+}
 
 // ── Message handler ───────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -11,7 +28,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message.type === 'REPORT_CURRENT_EMAIL') {
     if (!currentEmailData) { sendResponse({ ok: false, error: 'No email data' }); return true; }
-    chrome.runtime.sendMessage(
+    safeSendMessage(
       { type: 'REPORT_EMAIL', data: buildReportPayload(currentEmailData) },
       r => sendResponse(r?.result ? { ok: true } : { ok: false, error: r?.error || 'Failed' })
     );
@@ -267,7 +284,7 @@ function createBanner(result, emailData) {
   wrap.querySelector('.phishguard-btn-report')?.addEventListener('click', function () {
     this.textContent = 'Reporting...';
     this.disabled = true;
-    chrome.runtime.sendMessage(
+    safeSendMessage(
       { type: 'REPORT_EMAIL', data: buildReportPayload(emailData) },
       response => {
         if (response?.result) { this.textContent = 'Reported'; this.style.background = '#16a34a'; }
@@ -303,7 +320,7 @@ function analyzePane(pane) {
   loading.innerHTML = '<div class="phishguard-loading-dot"></div> PhishGuard analyzing...';
   pane.insertBefore(loading, pane.firstChild);
 
-  chrome.runtime.sendMessage(
+  safeSendMessage(
     { type: 'ANALYZE_EMAIL', data: { sender: emailData.sender, subject: emailData.subject, body_text: emailData.body_text, body_html: emailData.body_html } },
     (response) => {
       loading.remove();
@@ -329,8 +346,10 @@ function analyzePane(pane) {
 // ── Scan trigger ──────────────────────────────────────────────────────────────
 let scanTimer = null;
 const observer = new MutationObserver(() => {
+  if (!contextValid) { observer.disconnect(); return; }
   clearTimeout(scanTimer);
   scanTimer = setTimeout(() => {
+    if (!contextValid) return;
     const pane = findReadingPane();
     if (pane) analyzePane(pane);
   }, 600);

@@ -3,6 +3,22 @@ let currentUserEmail = '';
 let currentScan      = null;
 let currentEmailData = null;
 let analyzing = false;
+let contextValid = true;
+
+function safeSendMessage(msg, cb) {
+  if (!contextValid) return;
+  try {
+    chrome.runtime.sendMessage(msg, response => {
+      if (chrome.runtime.lastError) {
+        contextValid = false;
+        return;
+      }
+      if (cb) cb(response);
+    });
+  } catch {
+    contextValid = false;
+  }
+}
 
 // ── Message handler ───────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -12,7 +28,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message.type === 'REPORT_CURRENT_EMAIL') {
     if (!currentEmailData) { sendResponse({ ok: false, error: 'No email data' }); return true; }
-    chrome.runtime.sendMessage(
+    safeSendMessage(
       { type: 'REPORT_EMAIL', data: buildReportPayload(currentEmailData) },
       r => sendResponse(r?.result ? { ok: true } : { ok: false, error: r?.error || 'Failed' })
     );
@@ -221,7 +237,7 @@ function createBanner(result, emailData) {
   wrap.querySelector('.phishguard-btn-report')?.addEventListener('click', function () {
     this.textContent = 'Reporting...';
     this.disabled = true;
-    chrome.runtime.sendMessage(
+    safeSendMessage(
       { type: 'REPORT_EMAIL', data: buildReportPayload(emailData) },
       (response) => {
         if (response?.result) {
@@ -254,7 +270,7 @@ function analyzeEmailContainer(container) {
   loading.innerHTML = '<div class="phishguard-loading-dot"></div> PhishGuard analyzing...';
   container.insertBefore(loading, container.firstChild);
 
-  chrome.runtime.sendMessage(
+  safeSendMessage(
     { type: 'ANALYZE_EMAIL', data: { sender: emailData.sender, reply_to: emailData.reply_to, subject: emailData.subject, body_text: emailData.body_text, body_html: emailData.body_html } },
     (response) => {
       loading.remove();
@@ -322,8 +338,10 @@ function detectEmailSwitch() {
 
 let scanTimeout = null;
 const observer = new MutationObserver(() => {
+  if (!contextValid) { observer.disconnect(); return; }
   clearTimeout(scanTimeout);
   scanTimeout = setTimeout(() => {
+    if (!contextValid) return;
     detectEmailSwitch();
     scanForEmails();
   }, 500);
