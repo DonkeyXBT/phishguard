@@ -345,7 +345,12 @@ function analyzePane(pane) {
       loading.remove();
       analyzing = false;
       if (response?.result) {
-        currentScan      = response.result;
+        currentScan = response.result;
+
+        if (response.result.admin_reviewed) {
+          showPhishingCover(pane);
+          return;
+        }
 
         chrome.storage.local.get(['deletedEmails', 'ackedDeletions'], ({ deletedEmails = [], ackedDeletions = [] }) => {
           const match = deletedEmails.find(d => matchesDeletion(emailData, d));

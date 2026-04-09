@@ -27,6 +27,38 @@ export async function POST(req: NextRequest) {
     rawHeaders:  body.raw_headers ?? body.headers ?? null,
   })
 
+  // ── Check if admin already reviewed this email as phishing ──────────────
+  const sender = body.sender?.trim() || null
+  const subject = body.subject?.trim() || null
+  if (sender && subject) {
+    const reviewed = await prisma.emailReport.findFirst({
+      where: {
+        orgId: org.id,
+        sender: { equals: sender, mode: 'insensitive' },
+        subject: { equals: subject, mode: 'insensitive' },
+        status: { in: ['deleted', 'escalated'] },
+      },
+      orderBy: { reviewedAt: 'desc' },
+    })
+    if (reviewed) {
+      result.riskScore = 100
+      result.riskLevel = 'critical'
+      result.signals   = [
+        { code: 'admin_confirmed_phishing', label: 'Admin Confirmed Phishing', severity: 'critical', description: 'Your security team has reviewed this email and confirmed it is phishing.', detail: `Reviewed as ${reviewed.status}`, score: 100 },
+        ...result.signals,
+      ]
+      result.summary = 'This email was confirmed as phishing by your security team. Do not interact with it.'
+      return ok({
+        risk_score:  result.riskScore,
+        risk_level:  result.riskLevel,
+        signals:     result.signals,
+        summary:     result.summary,
+        email_auth:  result.emailAuth ?? null,
+        admin_reviewed: true,
+      })
+    }
+  }
+
   // ── Domain list override ──────────────────────────────────────────────────
   const domain = extractDomain(body.sender)
   if (domain) {

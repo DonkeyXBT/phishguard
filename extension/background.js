@@ -71,8 +71,8 @@ async function fetchAndBroadcastDeletions() {
   }
 }
 
-// Poll every 2 minutes
-chrome.alarms.create('poll-deletions', { periodInMinutes: 2 })
+// Poll every 1 minute for faster admin → user feedback
+chrome.alarms.create('poll-deletions', { periodInMinutes: 1 })
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === 'poll-deletions') fetchAndBroadcastDeletions()
 })
@@ -80,3 +80,13 @@ chrome.alarms.onAlarm.addListener(alarm => {
 // Also fetch on install / browser startup
 chrome.runtime.onInstalled.addListener(() => fetchAndBroadcastDeletions())
 chrome.runtime.onStartup.addListener(()   => fetchAndBroadcastDeletions())
+
+// Fetch when any email tab becomes active (user switches back to email)
+chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  try {
+    const tab = await chrome.tabs.get(tabId)
+    if (tab.url && (tab.url.includes('mail.google.com') || tab.url.includes('outlook.live.com') || tab.url.includes('outlook.office.com') || tab.url.includes('outlook.office365.com'))) {
+      fetchAndBroadcastDeletions()
+    }
+  } catch {}
+})

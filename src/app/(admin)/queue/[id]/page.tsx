@@ -7,7 +7,7 @@ import RiskBadge from '@/components/RiskBadge'
 import StatusBadge from '@/components/StatusBadge'
 import SignalsList from '@/components/SignalsList'
 import { parseHeaders, authLabel, authColor } from '@/lib/headers'
-import { ArrowLeft, CheckCircle, Trash2, Flag, ArrowUpRight, AlertTriangle, Link as LinkIcon, Paperclip, FileCode, History } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Trash2, Flag, ArrowUpRight, AlertTriangle, Link as LinkIcon, Paperclip, FileCode, History, ShieldCheck, ShieldBan } from 'lucide-react'
 
 interface Link { id: string; displayText: string | null; url: string | null; domain: string | null; isSuspicious: boolean; riskReason: string | null }
 interface Attachment { id: string; filename: string | null; contentType: string | null; isSuspicious: boolean; riskReason: string | null }
@@ -44,6 +44,7 @@ export default function EmailDetailPage() {
   const [tab, setTab] = useState<Tab>('overview')
   const [notes, setNotes] = useState('')
   const [acting, setActing] = useState(false)
+  const [domainMsg, setDomainMsg] = useState('')
 
   const load = async () => {
     const res = await api.getReport(id)
@@ -268,6 +269,31 @@ export default function EmailDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* Quick Domain Actions */}
+      {report.senderDomain && (
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-primary)] p-5 mt-5 shadow-[var(--shadow-sm)]">
+          <h3 className="font-semibold text-[var(--text-primary)] mb-2">Domain Actions</h3>
+          <p className="text-xs text-[var(--text-tertiary)] mb-3">Quickly add <code className="font-mono bg-[var(--bg-tertiary)] px-1 py-0.5 rounded">{report.senderDomain}</code> to your domain lists.</p>
+          {domainMsg && <div className="text-xs text-emerald-700 dark:text-emerald-400 mb-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg p-2">{domainMsg}</div>}
+          <div className="flex gap-3">
+            <button onClick={async () => {
+              const res = await api.addDomain(report.senderDomain!, 'blacklist', `Blacklisted from report: ${report.subject}`)
+              const data = await res.json()
+              setDomainMsg(res.ok ? `${report.senderDomain} added to blacklist` : (data.error || 'Failed'))
+            }} className="btn-press flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg py-2 px-4">
+              <ShieldBan size={14} /> Blacklist Domain
+            </button>
+            <button onClick={async () => {
+              const res = await api.addDomain(report.senderDomain!, 'whitelist', `Whitelisted from report: ${report.subject}`)
+              const data = await res.json()
+              setDomainMsg(res.ok ? `${report.senderDomain} added to whitelist` : (data.error || 'Failed'))
+            }} className="btn-press flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg py-2 px-4">
+              <ShieldCheck size={14} /> Whitelist Domain
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -278,6 +278,12 @@ function analyzeEmailContainer(container) {
       if (response?.result) {
         currentScan = response.result;
 
+        // If the API says admin already confirmed phishing, show the cover immediately
+        if (response.result.admin_reviewed) {
+          showPhishingCover(container);
+          return;
+        }
+
         chrome.storage.local.get(['deletedEmails', 'ackedDeletions'], ({ deletedEmails = [], ackedDeletions = [] }) => {
           const match = deletedEmails.find(d => matchesDeletion(emailData, d));
           if (match && !ackedDeletions.includes(match.id)) {
