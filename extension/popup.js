@@ -116,6 +116,28 @@ function showResult(scan) {
   });
 
   signalsDiv.innerHTML = '';
+
+  // Show email auth badges if available
+  const auth = scan.email_auth;
+  if (auth) {
+    const checks = [
+      { label: 'SPF', status: auth.spf?.status },
+      { label: 'DKIM', status: auth.dkim?.status },
+      { label: 'DMARC', status: auth.dmarc?.status },
+    ].filter(c => c.status && c.status !== 'unknown');
+
+    checks.forEach(c => {
+      const badge = document.createElement('span');
+      const pass = c.status === 'pass';
+      badge.className = 'signal-chip';
+      badge.style.cssText = pass
+        ? 'background: #f0fdf4; border-color: #bbf7d0; color: #15803d;'
+        : 'background: #fef2f2; border-color: #fecaca; color: #991b1b;';
+      badge.textContent = `${c.label}: ${c.status}`;
+      signalsDiv.appendChild(badge);
+    });
+  }
+
   (scan.signals || []).slice(0, 6).forEach(s => {
     const chip = document.createElement('span');
     chip.className   = 'signal-chip';
