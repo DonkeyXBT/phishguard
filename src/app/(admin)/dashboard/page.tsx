@@ -54,8 +54,8 @@ export default function DashboardPage() {
   const [recent, setRecent] = useState<ReportSummary[]>([])
 
   useEffect(() => {
-    api.getStats().then(r => r.json()).then(setStats)
-    api.getQueue({ limit: '5' }).then(r => r.json()).then(setRecent)
+    api.getStats().then(r => { if (r.ok) return r.json(); return null }).then(d => { if (d) setStats(d) })
+    api.getQueue({ limit: '5' }).then(r => { if (r.ok) return r.json(); return [] }).then(d => { if (Array.isArray(d)) setRecent(d) })
   }, [])
 
   const statCards = stats ? [

@@ -155,7 +155,7 @@ export default function OrganizationsPage() {
   const load = async () => {
     setLoading(true)
     const res = await api.get('/api/admin/organizations')
-    setOrgs(await res.json())
+    if (res.ok) { const data = await res.json(); if (Array.isArray(data)) setOrgs(data) }
     setLoading(false)
   }
 

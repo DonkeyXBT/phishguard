@@ -23,9 +23,10 @@ export default function AuditPage() {
 
   const load = async (p: number) => {
     const res = await api.getAuditLogs({ limit: String(limit), offset: String(p * limit) })
+    if (!res.ok) return
     const data = await res.json()
-    setLogs(data.logs)
-    setTotal(data.total)
+    setLogs(data.logs ?? [])
+    setTotal(data.total ?? 0)
   }
 
   useEffect(() => { load(page) }, [page])

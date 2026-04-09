@@ -32,7 +32,7 @@ export default function AnalyticsPage() {
   const [days, setDays] = useState(30)
 
   useEffect(() => {
-    api.get(`/api/admin/analytics?days=${days}`).then(r => r.json()).then(setData)
+    api.get(`/api/admin/analytics?days=${days}`).then(r => { if (r.ok) return r.json(); return null }).then(d => { if (d) setData(d) })
   }, [days])
 
   if (!data) return <div className="p-8 text-[var(--text-tertiary)]">Loading analytics...</div>

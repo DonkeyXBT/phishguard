@@ -16,8 +16,8 @@ export default function SettingsPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    api.me().then(r => r.json()).then(d => {
-      setMfaEnabled(d.mfaEnabled)
+    api.me().then(r => { if (r.ok) return r.json(); return null }).then(d => {
+      if (d) setMfaEnabled(d.mfaEnabled)
       setLoading(false)
     })
   }, [])

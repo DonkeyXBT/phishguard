@@ -165,9 +165,8 @@ export default function DomainsPage() {
   const [syncError, setSyncError] = useState('')
 
   const load = () =>
-    api.getDomains().then(r => r.json()).then(data => {
-      setWhitelist(data.whitelist ?? [])
-      setBlacklist(data.blacklist ?? [])
+    api.getDomains().then(r => { if (r.ok) return r.json(); return null }).then(data => {
+      if (data) { setWhitelist(data.whitelist ?? []); setBlacklist(data.blacklist ?? []) }
       setLoading(false)
     })
 

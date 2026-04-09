@@ -36,7 +36,7 @@ export default function QueuePage() {
     if (status) params.status = status
     if (risk) params.risk_level = risk
     const res = await api.getQueue(params)
-    setReports(await res.json())
+    if (res.ok) { const data = await res.json(); if (Array.isArray(data)) setReports(data) }
     setLoading(false)
   }
 
