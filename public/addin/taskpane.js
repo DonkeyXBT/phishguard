@@ -200,7 +200,12 @@ function analyzeCurrentEmail() {
 }
 
 // ── Display result ────────────────────────────────────────────────────────────
-const ICONS  = { low: '✅', medium: '⚠️', high: '🔶', critical: '🚨' };
+const ICONS = {
+  low: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#16a34a" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
+  medium: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#d97706" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  high: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ea580c" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>',
+  critical: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#dc2626" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+};
 const LABELS = { low: 'Safe Email', medium: 'Possible Phishing', high: 'Likely Phishing', critical: 'Phishing Detected' };
 const DESCS  = {
   low:      'No significant threats detected in this email.',
@@ -233,9 +238,10 @@ function showResult(data) {
   LEVELS.forEach(l => bar.classList.remove(l));
   bar.classList.add(level);
 
-  $('risk-icon').textContent  = ICONS[level] || '🔍';
+  $('risk-icon').innerHTML    = ICONS[level] || '';
   $('risk-score').textContent = score;
-  bar.style.width             = score + '%';
+  // Delay bar animation for visual effect
+  requestAnimationFrame(() => { requestAnimationFrame(() => { bar.style.width = score + '%'; }); });
   $('risk-desc').textContent  = DESCS[level] || '';
 
   // Signal chips
@@ -244,7 +250,7 @@ function showResult(data) {
   (data.signals || []).slice(0, 6).forEach(s => {
     const chip = document.createElement('span');
     chip.className   = 'signal-chip';
-    chip.textContent = '⚑ ' + s.label;
+    chip.textContent = s.label;
     signalsEl.appendChild(chip);
   });
 
@@ -253,8 +259,7 @@ function showResult(data) {
   reported = false;
   btn.disabled  = false;
   btn.className = 'btn-report';
-  btn.textContent = '🚩 Report as Phishing';
-  // Hide report button for safe emails
+  btn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg> Report as Phishing';
   btn.style.display = level === 'low' ? 'none' : 'flex';
 
   setState('result');
@@ -287,20 +292,22 @@ $('reportBtn').addEventListener('click', async () => {
       }),
     });
 
+    const reportIcon = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>';
     if (res.ok) {
       reported         = true;
       btn.className    = 'btn-report reported';
-      btn.textContent  = '✅ Reported to Security Team';
+      btn.innerHTML    = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Reported to Security Team';
       btn.disabled     = false;
     } else {
       const d = await res.json();
-      btn.textContent  = '⚠️ ' + (d.error || 'Report failed');
+      btn.textContent  = (d.error || 'Report failed');
       btn.disabled     = false;
-      setTimeout(() => { btn.textContent = '🚩 Report as Phishing'; }, 3000);
+      setTimeout(() => { btn.innerHTML = reportIcon + ' Report as Phishing'; }, 3000);
     }
   } catch {
-    btn.textContent = '⚠️ Cannot reach server';
+    btn.textContent = 'Cannot reach server';
     btn.disabled    = false;
-    setTimeout(() => { btn.textContent = '🚩 Report as Phishing'; }, 3000);
+    const reportIcon = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>';
+    setTimeout(() => { btn.innerHTML = reportIcon + ' Report as Phishing'; }, 3000);
   }
 });

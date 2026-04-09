@@ -14,14 +14,12 @@
   <DisplayName DefaultValue="PhishGuard"/>
   <Description DefaultValue="Real-time phishing detection for Outlook. Automatically analyzes emails and lets users report suspicious messages to the security team."/>
 
-  <!-- Icons (Office requires PNG; replace .svg with .png for production) -->
-  <IconUrl DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon80.png"/>
-  <SupportUrl DefaultValue="https://phishing-detector-orpin-ten.vercel.app"/>
+  <IconUrl DefaultValue="{{BASE_URL}}/addin/icon32.png"/>
+  <HighResolutionIconUrl DefaultValue="{{BASE_URL}}/addin/icon80.png"/>
+  <SupportUrl DefaultValue="{{BASE_URL}}"/>
 
-  <!-- Allowed domains -->
   <AppDomains>
-    <AppDomain>https://phishing-detector-orpin-ten.vercel.app</AppDomain>
+    <AppDomain>{{BASE_URL}}</AppDomain>
   </AppDomains>
 
   <Hosts>
@@ -34,25 +32,21 @@
     </Sets>
   </Requirements>
 
-  <!-- Legacy task pane (Outlook 2013/2016 fallback) -->
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/taskpane.html"/>
+        <SourceLocation DefaultValue="{{BASE_URL}}/addin/taskpane.html"/>
         <RequestedHeight>350</RequestedHeight>
       </DesktopSettings>
     </Form>
   </FormSettings>
 
-  <!-- Permissions: ReadItem lets us read subject, sender, and body -->
   <Permissions>ReadItem</Permissions>
 
-  <!-- Activate on any email being read -->
   <Rule xsi:type="RuleCollection" Mode="Or">
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
   </Rule>
 
-  <!-- ── Modern ribbon button (Outlook 2016+ / 365) ── -->
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
 
     <Requirements>
@@ -64,17 +58,11 @@
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
-
-          <!-- Background commands page (required even if unused) -->
           <FunctionFile resid="Commands.Url"/>
-
-          <!-- Ribbon button in the reading pane toolbar -->
           <ExtensionPoint xsi:type="MessageReadCommandSurface">
             <OfficeTab id="TabDefault">
               <Group id="PhishGuardGroup">
                 <Label resid="GroupLabel"/>
-
-                <!-- "Analyze" button that opens the task pane -->
                 <Control xsi:type="Button" id="PhishGuardOpenPane">
                   <Label resid="Btn.Label"/>
                   <Supertip>
@@ -90,24 +78,22 @@
                     <SourceLocation resid="Taskpane.Url"/>
                   </Action>
                 </Control>
-
               </Group>
             </OfficeTab>
           </ExtensionPoint>
-
         </DesktopFormFactor>
       </Host>
     </Hosts>
 
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon16.png"/>
-        <bt:Image id="Icon.32"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon32.png"/>
-        <bt:Image id="Icon.80"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/icon80.png"/>
+        <bt:Image id="Icon.16"  DefaultValue="{{BASE_URL}}/addin/icon16.png"/>
+        <bt:Image id="Icon.32"  DefaultValue="{{BASE_URL}}/addin/icon32.png"/>
+        <bt:Image id="Icon.80"  DefaultValue="{{BASE_URL}}/addin/icon80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="Commands.Url"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/commands.html"/>
-        <bt:Url id="Taskpane.Url"  DefaultValue="https://phishing-detector-orpin-ten.vercel.app/addin/taskpane.html"/>
+        <bt:Url id="Commands.Url"  DefaultValue="{{BASE_URL}}/addin/commands.html"/>
+        <bt:Url id="Taskpane.Url"  DefaultValue="{{BASE_URL}}/addin/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GroupLabel"  DefaultValue="PhishGuard"/>

@@ -4,133 +4,153 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PhishGuard</title>
-  <!-- Office.js must be loaded first -->
   <script src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
     :root {
-      --bg:        #0f1117;
-      --bg2:       #161b27;
-      --bg3:       #1c2333;
-      --border:    rgba(255,255,255,0.07);
-      --text:      #f0f2f5;
-      --muted:     #6b7280;
-      --subtle:    #374151;
-      --blue:      #3b82f6;
-      --green:     #22c55e;
-      --red:       #ef4444;
-      --amber:     #f59e0b;
-      --orange:    #f97316;
+      --bg: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-input: #ffffff;
+      --bg-hover: #f1f5f9;
+      --border: #e2e8f0;
+      --border-focus: #3b82f6;
+      --text: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --blue: #2563eb;
+      --blue-light: #eff6ff;
+      --green: #16a34a;
+      --red: #dc2626;
+      --amber: #d97706;
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-size: 13px;
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
     }
 
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
     /* ── Header ── */
     .header {
-      background: var(--bg2);
+      background: var(--bg-card);
       border-bottom: 1px solid var(--border);
       padding: 12px 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between;
       position: sticky; top: 0; z-index: 10;
     }
     .header-left { display: flex; align-items: center; gap: 10px; }
     .logo {
       width: 30px; height: 30px;
-      background: linear-gradient(135deg, #dc2626, #991b1b);
+      background: linear-gradient(135deg, #1e40af, #3b82f6);
       border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 15px; flex-shrink: 0;
-      box-shadow: 0 2px 8px rgba(220,38,38,0.35);
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(37,99,235,0.25);
     }
-    .header-title { font-weight: 700; font-size: 14px; }
-    .header-sub   { font-size: 10px; color: var(--muted); margin-top: 1px; }
+    .logo svg { width: 14px; height: 14px; fill: white; }
+    .header-title { font-weight: 700; font-size: 14px; color: var(--text); }
+    .header-sub   { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
     .gear-btn {
       background: none; border: none; cursor: pointer;
-      color: var(--subtle); padding: 5px; border-radius: 6px;
-      font-size: 15px; line-height: 1;
-      transition: color 0.15s, background 0.15s;
+      color: var(--text-muted); padding: 5px; border-radius: 6px;
+      transition: color 150ms ease, background 150ms ease;
+      display: flex; align-items: center; justify-content: center;
     }
-    .gear-btn:hover { color: var(--text); background: var(--bg3); }
+    .gear-btn:hover { color: var(--text); background: var(--bg-hover); }
+    .gear-btn:active { transform: scale(0.95); }
+    .gear-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
 
     /* ── Body ── */
     .body { padding: 14px; }
 
     /* ── States ── */
     .state { display: none; }
-    .state.active { display: block; }
+    .state.active { display: block; animation: fadeIn 300ms var(--ease-out); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* Loading */
     .loading-wrap { text-align: center; padding: 40px 16px; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner {
-      width: 32px; height: 32px;
-      border: 3px solid rgba(59,130,246,0.15);
+      width: 28px; height: 28px;
+      border: 2.5px solid #e2e8f0;
       border-top-color: var(--blue);
       border-radius: 50%;
       margin: 0 auto 12px;
-      animation: spin 0.8s linear infinite;
+      animation: spin 0.7s linear infinite;
     }
-    .loading-label { font-size: 12px; color: var(--muted); }
+    .loading-label { font-size: 12px; color: var(--text-muted); }
 
-    /* Need settings */
     .need-settings-wrap { text-align: center; padding: 28px 14px 14px; }
-    .need-settings-wrap .icon { font-size: 32px; margin-bottom: 10px; }
-    .need-settings-wrap h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
-    .need-settings-wrap p  { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 16px; }
+    .need-settings-wrap .icon-wrap {
+      width: 48px; height: 48px; margin: 0 auto 12px;
+      background: var(--blue-light); border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .need-settings-wrap .icon-wrap svg { width: 22px; height: 22px; stroke: var(--blue); fill: none; stroke-width: 2; }
+    .need-settings-wrap h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+    .need-settings-wrap p  { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px; }
 
-    /* Error */
     .error-box {
-      background: #1f0a0a; border: 1px solid #7f1d1d33;
+      background: #fef2f2; border: 1px solid #fecaca;
       border-radius: 10px; padding: 14px; margin-bottom: 12px;
-      font-size: 12px; color: #fca5a5; line-height: 1.5;
+      font-size: 12px; color: #991b1b; line-height: 1.5;
     }
     .btn-retry {
-      background: var(--bg3); border: 1px solid var(--border); color: var(--text);
-      border-radius: 7px; padding: 7px 14px; font-size: 12px; font-weight: 600;
-      cursor: pointer; transition: background 0.15s;
+      background: var(--bg-card); border: 1px solid var(--border); color: var(--text);
+      border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600;
+      cursor: pointer;
+      transition: transform 150ms var(--ease-out), background-color 150ms ease;
+      font-family: inherit;
     }
-    .btn-retry:hover { background: var(--subtle); }
+    .btn-retry:hover { background: var(--bg-hover); }
+    .btn-retry:active { transform: scale(0.97); }
 
     /* ── Risk card ── */
     .risk-card {
       border-radius: 12px; padding: 14px;
       border: 1px solid; margin-bottom: 12px;
       position: relative; overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
     .risk-card::before {
       content: ''; position: absolute;
-      top: 0; left: 0; right: 0; height: 2px;
+      top: 0; left: 0; right: 0; height: 3px;
     }
-    .risk-card.low      { background: #071a10; border-color: #14532d33; }
-    .risk-card.medium   { background: #1a1200; border-color: #78350f33; }
-    .risk-card.high     { background: #180d04; border-color: #7c2d1233; }
-    .risk-card.critical { background: #170606; border-color: #7f1d1d33; }
-    .risk-card.low::before      { background: linear-gradient(90deg, #22c55e, #16a34a); }
-    .risk-card.medium::before   { background: linear-gradient(90deg, #f59e0b, #d97706); }
-    .risk-card.high::before     { background: linear-gradient(90deg, #f97316, #ea580c); }
-    .risk-card.critical::before { background: linear-gradient(90deg, #ef4444, #dc2626); }
+    .risk-card.low      { background: #f0fdf4; border-color: #bbf7d0; }
+    .risk-card.medium   { background: #fffbeb; border-color: #fde68a; }
+    .risk-card.high     { background: #fff7ed; border-color: #fed7aa; }
+    .risk-card.critical { background: #fef2f2; border-color: #fecaca; }
+    .risk-card.low::before      { background: linear-gradient(90deg, #16a34a, #22c55e); }
+    .risk-card.medium::before   { background: linear-gradient(90deg, #d97706, #f59e0b); }
+    .risk-card.high::before     { background: linear-gradient(90deg, #ea580c, #f97316); }
+    .risk-card.critical::before { background: linear-gradient(90deg, #dc2626, #ef4444); }
 
     .risk-top {
       display: flex; align-items: center;
       justify-content: space-between; margin-bottom: 10px;
     }
     .risk-left   { display: flex; align-items: center; gap: 9px; }
-    .risk-icon   { font-size: 22px; }
+    .risk-icon   { font-size: 20px; display: flex; }
+    .risk-icon svg { width: 20px; height: 20px; stroke-width: 2; fill: none; }
     .risk-label  { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
-    .risk-label.low      { color: #4ade80; }
-    .risk-label.medium   { color: #fbbf24; }
-    .risk-label.high     { color: #fb923c; }
-    .risk-label.critical { color: #f87171; }
+    .risk-label.low      { color: #15803d; }
+    .risk-label.medium   { color: #92400e; }
+    .risk-label.high     { color: #9a3412; }
+    .risk-label.critical { color: #991b1b; }
 
     .risk-badge {
       display: inline-flex; align-items: baseline; gap: 2px;
@@ -138,117 +158,111 @@
       font-size: 11px; font-weight: 700;
     }
     .risk-badge .num   { font-size: 18px; line-height: 1; }
-    .risk-badge .denom { font-size: 10px; opacity: 0.6; }
-    .low    .risk-badge { background: rgba(34,197,94,0.15);  color: #4ade80; }
-    .medium .risk-badge { background: rgba(251,191,36,0.15); color: #fbbf24; }
-    .high   .risk-badge { background: rgba(251,146,60,0.15); color: #fb923c; }
-    .critical .risk-badge { background: rgba(248,113,113,0.15); color: #f87171; }
+    .risk-badge .denom { font-size: 10px; opacity: 0.55; }
+    .low    .risk-badge { background: rgba(22,163,74,0.1);  color: #15803d; }
+    .medium .risk-badge { background: rgba(217,119,6,0.1); color: #92400e; }
+    .high   .risk-badge { background: rgba(234,88,12,0.1); color: #9a3412; }
+    .critical .risk-badge { background: rgba(220,38,38,0.1); color: #991b1b; }
 
     .risk-bar-track {
-      height: 3px; background: rgba(255,255,255,0.06);
+      height: 4px; background: rgba(0,0,0,0.06);
       border-radius: 2px; margin-bottom: 10px; overflow: hidden;
     }
     .risk-bar-fill {
       height: 100%; border-radius: 2px;
-      transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+      transition: width 800ms cubic-bezier(0.77, 0, 0.175, 1);
     }
-    .low    .risk-bar-fill { background: linear-gradient(90deg, #22c55e, #4ade80); }
-    .medium .risk-bar-fill { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-    .high   .risk-bar-fill { background: linear-gradient(90deg, #f97316, #fb923c); }
-    .critical .risk-bar-fill { background: linear-gradient(90deg, #ef4444, #f87171); }
+    .low    .risk-bar-fill { background: linear-gradient(90deg, #16a34a, #22c55e); }
+    .medium .risk-bar-fill { background: linear-gradient(90deg, #d97706, #f59e0b); }
+    .high   .risk-bar-fill { background: linear-gradient(90deg, #ea580c, #f97316); }
+    .critical .risk-bar-fill { background: linear-gradient(90deg, #dc2626, #ef4444); }
 
-    .risk-desc {
-      font-size: 12px; color: #9ca3af; line-height: 1.5; margin-bottom: 10px;
-    }
+    .risk-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px; }
 
-    /* Signals */
     .signals { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
     .signal-chip {
-      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 20px; padding: 3px 9px;
-      font-size: 11px; color: #cbd5e1; font-weight: 500;
+      background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.06);
+      border-radius: 6px; padding: 3px 9px;
+      font-size: 11px; color: var(--text-secondary); font-weight: 500;
     }
 
-    /* Email meta */
     .email-meta {
-      background: var(--bg3); border: 1px solid var(--border);
+      background: var(--bg); border: 1px solid var(--border);
       border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;
     }
     .meta-row { display: flex; gap: 6px; font-size: 11.5px; margin-bottom: 4px; }
     .meta-row:last-child { margin-bottom: 0; }
-    .meta-key { color: var(--muted); flex-shrink: 0; min-width: 48px; }
-    .meta-val { color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .meta-key { color: var(--text-muted); flex-shrink: 0; min-width: 48px; font-weight: 500; }
+    .meta-val { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* ── Buttons ── */
     .btn-report {
-      width: 100%;
-      background: linear-gradient(135deg, #dc2626, #b91c1c);
-      color: white; border: none; border-radius: 9px;
-      padding: 11px; font-size: 13px; font-weight: 700;
-      cursor: pointer; transition: all 0.15s;
+      width: 100%; background: var(--red); color: white;
+      border: none; border-radius: 10px; padding: 11px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: transform 150ms var(--ease-out), background-color 150ms ease, box-shadow 150ms ease;
       display: flex; align-items: center; justify-content: center; gap: 7px;
-      box-shadow: 0 2px 10px rgba(220,38,38,0.3);
+      box-shadow: 0 1px 3px rgba(220,38,38,0.2);
       font-family: inherit;
     }
-    .btn-report:hover:not(:disabled) {
-      background: linear-gradient(135deg, #b91c1c, #991b1b);
-      box-shadow: 0 4px 16px rgba(220,38,38,0.4);
-      transform: translateY(-1px);
-    }
+    .btn-report:hover:not(:disabled) { background: #b91c1c; }
+    .btn-report:active:not(:disabled) { transform: scale(0.97); }
     .btn-report:disabled { opacity: 0.45; cursor: default; box-shadow: none; transform: none; }
     .btn-report.reported {
-      background: linear-gradient(135deg, #15803d, #166534);
-      box-shadow: 0 2px 10px rgba(21,128,61,0.3);
+      background: var(--green);
+      box-shadow: 0 1px 3px rgba(22,163,74,0.2);
     }
     .btn-analyze {
       width: 100%; background: var(--blue); color: white;
-      border: none; border-radius: 9px; padding: 11px;
+      border: none; border-radius: 10px; padding: 11px;
       font-size: 13px; font-weight: 700; cursor: pointer;
-      transition: background 0.15s; font-family: inherit;
+      transition: transform 150ms var(--ease-out), background-color 150ms ease;
+      font-family: inherit;
     }
-    .btn-analyze:hover { background: #2563eb; }
+    .btn-analyze:hover { background: #1d4ed8; }
+    .btn-analyze:active { transform: scale(0.97); }
 
     /* ── Settings ── */
     .settings-wrap { padding: 14px; border-top: 1px solid var(--border); }
     .settings-title {
-      font-size: 10px; font-weight: 600; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px;
+      font-size: 10px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;
     }
-    .field-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
+    .field-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500; }
     input[type="text"], input[type="url"] {
-      width: 100%; background: var(--bg2);
-      border: 1px solid var(--border); border-radius: 7px;
-      padding: 8px 10px; color: #e2e8f0;
+      width: 100%; background: var(--bg-input);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 9px 10px; color: var(--text);
       font-size: 11.5px; outline: none;
-      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
       margin-bottom: 10px;
-      transition: border-color 0.15s;
+      transition: border-color 150ms ease, box-shadow 150ms ease;
     }
-    input:focus { border-color: var(--blue); }
-    input::placeholder { color: #374151; }
+    input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+    input::placeholder { color: var(--text-muted); }
     .btn-save {
-      width: 100%; background: #2563eb; color: white;
-      border: none; border-radius: 7px; padding: 8px;
+      width: 100%; background: var(--blue); color: white;
+      border: none; border-radius: 8px; padding: 9px;
       font-size: 12px; font-weight: 600; cursor: pointer;
-      transition: background 0.15s; font-family: inherit;
+      transition: transform 150ms var(--ease-out), background-color 150ms ease;
+      font-family: inherit;
     }
     .btn-save:hover { background: #1d4ed8; }
-    .saved-msg { font-size: 11px; color: #22c55e; margin-top: 6px; text-align: center; display: none; }
+    .btn-save:active { transform: scale(0.97); }
+    .saved-msg { font-size: 11px; color: var(--green); margin-top: 6px; text-align: center; display: none; font-weight: 500; }
 
-    /* ── Conn bar ── */
+    /* ── Connection bar ── */
     .conn-bar {
       display: flex; align-items: center; gap: 6px;
-      padding: 6px 14px; border-top: 1px solid var(--border);
-      font-size: 11px; color: var(--muted); background: #0d1018;
+      padding: 7px 14px; border-top: 1px solid var(--border);
+      font-size: 11px; color: var(--text-muted); background: var(--bg-card);
       position: sticky; bottom: 0;
     }
     .conn-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
     @keyframes blink { 0%,100% { opacity:0.4; } 50% { opacity:1; } }
-    .conn-dot.ok      { background: #22c55e; box-shadow: 0 0 5px #22c55e88; }
-    .conn-dot.err     { background: #ef4444; }
+    .conn-dot.ok      { background: #16a34a; box-shadow: 0 0 5px rgba(22,163,74,0.4); }
+    .conn-dot.err     { background: #dc2626; }
     .conn-dot.loading { background: var(--amber); animation: blink 1s ease-in-out infinite; }
-
-    .divider { height: 1px; background: var(--border); }
   </style>
 </head>
 <body>
@@ -256,19 +270,22 @@
   <!-- Header -->
   <div class="header">
     <div class="header-left">
-      <div class="logo">🛡️</div>
+      <div class="logo">
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+      </div>
       <div>
         <div class="header-title">PhishGuard</div>
         <div class="header-sub">Email Security</div>
       </div>
     </div>
-    <button class="gear-btn" id="gearBtn" title="Settings">⚙️</button>
+    <button class="gear-btn" id="gearBtn" title="Settings">
+      <svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
   </div>
 
   <!-- Main body -->
   <div class="body">
 
-    <!-- State: initialising -->
     <div class="state active" id="state-init">
       <div class="loading-wrap">
         <div class="spinner"></div>
@@ -276,7 +293,6 @@
       </div>
     </div>
 
-    <!-- State: scanning -->
     <div class="state" id="state-scanning">
       <div class="loading-wrap">
         <div class="spinner"></div>
@@ -284,29 +300,26 @@
       </div>
     </div>
 
-    <!-- State: needs API key -->
     <div class="state" id="state-needs-key">
       <div class="need-settings-wrap">
-        <div class="icon">🔑</div>
+        <div class="icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        </div>
         <h3>API Key Required</h3>
         <p>Enter your organization's PhishGuard API key below to start scanning emails.</p>
       </div>
     </div>
 
-    <!-- State: error -->
     <div class="state" id="state-error">
       <div class="error-box" id="error-text">An error occurred.</div>
-      <button class="btn-retry" id="retryBtn">↺ Try Again</button>
+      <button class="btn-retry" id="retryBtn">Try Again</button>
     </div>
 
-    <!-- State: result -->
     <div class="state" id="state-result">
-
-      <!-- Risk card -->
       <div class="risk-card low" id="risk-card">
         <div class="risk-top">
           <div class="risk-left">
-            <span class="risk-icon" id="risk-icon">✅</span>
+            <span class="risk-icon" id="risk-icon"></span>
             <span class="risk-label low" id="risk-label">Safe Email</span>
           </div>
           <div class="risk-badge" id="risk-badge">
@@ -321,7 +334,6 @@
         <div class="signals" id="signals"></div>
       </div>
 
-      <!-- Email metadata -->
       <div class="email-meta" id="email-meta">
         <div class="meta-row">
           <span class="meta-key">From</span>
@@ -333,17 +345,13 @@
         </div>
       </div>
 
-      <!-- Report button -->
       <button class="btn-report" id="reportBtn">
-        🚩 Report as Phishing
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+        Report as Phishing
       </button>
-
     </div>
 
   </div>
-
-  <!-- Divider -->
-  <div class="divider"></div>
 
   <!-- Settings panel -->
   <div class="settings-wrap" id="settingsPanel" style="display:none">

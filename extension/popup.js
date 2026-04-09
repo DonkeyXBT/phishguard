@@ -22,6 +22,14 @@ const apiKeyInput   = document.getElementById('apiKey');
 const saveBtn       = document.getElementById('saveBtn');
 const savedMsg      = document.getElementById('savedMsg');
 
+// ── SVG icons (inline Lucide) ─────────────────────────────────────────────────
+const SVG_ICONS = {
+  low: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#16a34a" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
+  medium: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#d97706" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  high: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ea580c" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>',
+  critical: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#dc2626" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+};
+
 // ── Settings panel ────────────────────────────────────────────────────────────
 function loadSettings(cb) {
   chrome.storage.sync.get(['apiUrl', 'apiKey'], result => {
@@ -98,12 +106,14 @@ function showResult(scan) {
   riskBadge.classList.add(level);
   riskBar.classList.add(level);
 
-  const icons  = { low: '✅', medium: '⚠️', high: '🔶', critical: '🚨' };
   const labels = { low: 'Low Risk', medium: 'Possible Phishing', high: 'Likely Phishing', critical: 'Phishing Detected' };
-  riskIcon.textContent  = icons[level] || '🔍';
+  riskIcon.innerHTML = SVG_ICONS[level] || '';
   riskLabel.textContent = labels[level] || level;
   riskScore.textContent = score;
-  riskBar.style.width   = score + '%';
+  // Delay bar fill for animation effect
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => { riskBar.style.width = score + '%'; });
+  });
 
   signalsDiv.innerHTML = '';
   (scan.signals || []).slice(0, 6).forEach(s => {
@@ -115,10 +125,9 @@ function showResult(scan) {
 
   summaryText.textContent = scan.summary || '';
 
-  // Reset report button
   reportBtn.disabled   = false;
   reportBtn.className  = 'btn-report';
-  reportBtn.innerHTML  = '🚩 Report as Phishing';
+  reportBtn.innerHTML  = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg> Report as Phishing';
 }
 
 // ── Report button ─────────────────────────────────────────────────────────────
@@ -132,16 +141,18 @@ reportBtn.addEventListener('click', () => {
   chrome.tabs.sendMessage(currentTabId, { type: 'REPORT_CURRENT_EMAIL' }, response => {
     if (chrome.runtime.lastError || !response) {
       reportBtn.disabled  = false;
-      reportBtn.innerHTML = '🚩 Report as Phishing';
+      reportBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg> Report as Phishing';
       return;
     }
     if (response.ok) {
       reportBtn.classList.add('reported');
-      reportBtn.innerHTML = '✅ Reported to Security Team';
+      reportBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Reported to Security Team';
     } else {
       reportBtn.disabled  = false;
-      reportBtn.innerHTML = '⚠️ ' + (response.error || 'Failed — try again');
-      setTimeout(() => { reportBtn.innerHTML = '🚩 Report as Phishing'; }, 3000);
+      reportBtn.innerHTML = (response.error || 'Failed — try again');
+      setTimeout(() => {
+        reportBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg> Report as Phishing';
+      }, 3000);
     }
   });
 });
@@ -178,7 +189,6 @@ chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
     if (response && response.scan) {
       showResult(response.scan);
     } else {
-      // Still analyzing — poll once after short delay
       setTimeout(() => {
         chrome.tabs.sendMessage(tab.id, { type: 'GET_CURRENT_SCAN' }, r => {
           if (r && r.scan) showResult(r.scan);
