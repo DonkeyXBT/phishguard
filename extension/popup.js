@@ -181,20 +181,30 @@ chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
 
   showScanning();
 
-  chrome.tabs.sendMessage(tab.id, { type: 'GET_CURRENT_SCAN' }, response => {
-    if (chrome.runtime.lastError) {
-      showNotEmail();
-      return;
-    }
-    if (response && response.scan) {
-      showResult(response.scan);
-    } else {
-      setTimeout(() => {
-        chrome.tabs.sendMessage(tab.id, { type: 'GET_CURRENT_SCAN' }, r => {
-          if (r && r.scan) showResult(r.scan);
-          else showNotEmail();
-        });
-      }, 1500);
-    }
-  });
+  let pollCount = 0;
+  const maxPolls = 10;
+
+  function pollForResult() {
+    chrome.tabs.sendMessage(tab.id, { type: 'GET_CURRENT_SCAN' }, response => {
+      if (chrome.runtime.lastError) {
+        showNotEmail();
+        return;
+      }
+      if (response && response.scan) {
+        showResult(response.scan);
+      } else if (response && response.analyzing && pollCount < maxPolls) {
+        // Still analyzing — keep polling
+        pollCount++;
+        setTimeout(pollForResult, 1500);
+      } else if (pollCount < 3) {
+        // No scan yet and not analyzing — give it a few more tries in case content script is still loading
+        pollCount++;
+        setTimeout(pollForResult, 1500);
+      } else {
+        showNotEmail();
+      }
+    });
+  }
+
+  pollForResult();
 });

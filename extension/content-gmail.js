@@ -4,9 +4,11 @@ let currentScan      = null;
 let currentEmailData = null;
 
 // ── Message handler ───────────────────────────────────────────────────────────
+let analyzing = false;
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'GET_CURRENT_SCAN') {
-    sendResponse({ scan: currentScan, emailData: currentEmailData });
+    sendResponse({ scan: currentScan, emailData: currentEmailData, analyzing });
     return true;
   }
   if (message.type === 'REPORT_CURRENT_EMAIL') {
@@ -187,6 +189,9 @@ function analyzeEmailContainer(container) {
   const emailData = parseGmailEmail(container);
   if (!emailData.sender && !emailData.body_text) return;
 
+  analyzing = true;
+  currentEmailData = emailData;
+
   const loading = document.createElement('div');
   loading.className = 'phishguard-loading';
   loading.innerHTML = '<div class="phishguard-loading-dot"></div> PhishGuard analyzing...';
@@ -196,9 +201,9 @@ function analyzeEmailContainer(container) {
     { type: 'ANALYZE_EMAIL', data: { sender: emailData.sender, reply_to: emailData.reply_to, subject: emailData.subject, body_text: emailData.body_text, body_html: emailData.body_html } },
     (response) => {
       loading.remove();
+      analyzing = false;
       if (response?.result) {
         currentScan      = response.result;
-        currentEmailData = emailData;
 
         chrome.storage.local.get(['deletedEmails', 'ackedDeletions'], ({ deletedEmails = [], ackedDeletions = [] }) => {
           const match = deletedEmails.find(d => matchesDeletion(emailData, d));
@@ -220,10 +225,27 @@ function analyzeEmailContainer(container) {
 
 function scanForEmails() {
   currentUserEmail = getUserEmail();
-  document.querySelectorAll('.adn.ads:not([data-phishguard-analyzed]), .gs:not([data-phishguard-analyzed])')
-    .forEach(el => { if (el.querySelector('.a3s')) analyzeEmailContainer(el); });
+  // Gmail uses multiple container patterns — try all known ones
+  const selectors = [
+    '.adn.ads:not([data-phishguard-analyzed])',
+    '.gs:not([data-phishguard-analyzed])',
+    '[data-message-id]:not([data-phishguard-analyzed])',
+    '.nH.hx:not([data-phishguard-analyzed])',
+  ];
+  const selector = selectors.join(', ');
+  document.querySelectorAll(selector)
+    .forEach(el => {
+      // Must contain an email body element
+      if (el.querySelector('.a3s') || el.querySelector('.a3s.aiL') || el.querySelector('[data-message-id] .ii.gt div') || el.querySelector('.ii.gt')) {
+        analyzeEmailContainer(el);
+      }
+    });
 }
 
-const observer = new MutationObserver(() => scanForEmails());
+let scanTimeout = null;
+const observer = new MutationObserver(() => {
+  clearTimeout(scanTimeout);
+  scanTimeout = setTimeout(scanForEmails, 500);
+});
 observer.observe(document.body, { childList: true, subtree: true });
 scanForEmails();
