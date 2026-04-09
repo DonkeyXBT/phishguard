@@ -60,22 +60,41 @@ function matchesDeletion(emailData, d) {
 // ── Outlook DOM helpers ───────────────────────────────────────────────────────
 function findReadingPane() {
   const candidates = [
+    // Standard reading pane selectors
     '[data-app-section="ReadingPane"]',
     '[data-testid="ReadingPane"]',
     '[class*="ReadingPaneContent"]',
     '[class*="readingPane"]:not([class*="List"])',
     '[class*="ReadingPane"]:not([class*="List"])',
+    // Junk/Spam email view — may have different container structure
+    '[class*="JunkEmail"]',
+    '[class*="junkEmail"]',
+    '[class*="ItemReadingPane"]',
+    '[class*="itemReadingPane"]',
+    // Conversation view container
+    '[class*="ConversationReadingPane"]',
+    // Broad fallback — main content region
     '[role="main"]',
+    // Last resort — anything with a message body inside
+    '[role="region"]',
   ];
   for (const sel of candidates) {
     try {
       const els = document.querySelectorAll(sel);
       for (const el of els) {
-        if (el.offsetHeight > 80 && el.querySelector('h1, [role="heading"], [class*="subject" i]')) return el;
+        if (el.offsetHeight > 80 && el.querySelector('h1, [role="heading"], [class*="subject" i], [class*="Subject"]')) return el;
       }
       for (const el of els) {
         if (el.offsetHeight > 80) return el;
       }
+    } catch {}
+  }
+  // Fallback: find any visible element that contains a message body
+  const bodySelectors = ['[id*="UniqueMessageBody"]', '[class*="MessageBody"]', '[class*="messageBody" i]'];
+  for (const sel of bodySelectors) {
+    try {
+      const el = document.querySelector(sel);
+      if (el?.offsetHeight > 50) return el.closest('[role="main"], [role="region"], [class*="ReadingPane"], [class*="readingPane"]') || el.parentElement;
     } catch {}
   }
   return null;
@@ -345,11 +364,24 @@ function analyzePane(pane) {
 
 // ── Scan trigger ──────────────────────────────────────────────────────────────
 let scanTimer = null;
+let lastUrl = location.href;
+
 const observer = new MutationObserver(() => {
   if (!contextValid) { observer.disconnect(); return; }
+
+  // Detect SPA navigation (folder change: inbox → junk, etc.)
+  if (location.href !== lastUrl) {
+    lastUrl = location.href;
+    lastAnalyzedKey = ''; // reset so the next email gets scanned
+    currentScan = null;
+    currentEmailData = null;
+  }
+
   clearTimeout(scanTimer);
   scanTimer = setTimeout(() => {
     if (!contextValid) return;
+    // Skip if we already have a banner visible for this email
+    if (document.querySelector('.phishguard-wrap, .phishguard-loading, .phishguard-cover')) return;
     const pane = findReadingPane();
     if (pane) analyzePane(pane);
   }, 600);
