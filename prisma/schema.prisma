@@ -26,8 +26,11 @@ model User {
   email          String   @unique
   hashedPassword String   @map("hashed_password")
   fullName       String?  @map("full_name")
+  role           String   @default("viewer")   // "super_admin" | "admin" | "analyst" | "viewer"
   isAdmin        Boolean  @default(false) @map("is_admin")
   isActive       Boolean  @default(true) @map("is_active")
+  mfaSecret      String?  @map("mfa_secret")
+  mfaEnabled     Boolean  @default(false) @map("mfa_enabled")
   createdAt      DateTime @default(now()) @map("created_at")
 
   organization Organization  @relation(fields: [orgId], references: [id])
@@ -87,6 +90,11 @@ model EmailAttachment {
   filename     String?
   contentType  String? @map("content_type")
   fileSize     Int?    @map("file_size")
+  sha256       String?
+  detectedType String? @map("detected_type")
+  hasMacros    Boolean @default(false) @map("has_macros")
+  vtPositives  Int?    @map("vt_positives")
+  vtTotal      Int?    @map("vt_total")
   isSuspicious Boolean @default(false) @map("is_suspicious")
   riskReason   String? @map("risk_reason")
 
@@ -119,4 +127,21 @@ model AdminAction {
   admin  User        @relation(fields: [adminId], references: [id])
 
   @@map("admin_actions")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?  @map("user_id")
+  userEmail  String?  @map("user_email")
+  action     String                          // e.g. "login", "report.review", "domain.add", "org.create", "mfa.enable"
+  resource   String?                         // e.g. "report:clxyz123", "domain:evil.com"
+  detail     String?                         // human-readable summary
+  ip         String?
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

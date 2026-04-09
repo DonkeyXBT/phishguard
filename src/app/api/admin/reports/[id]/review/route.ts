@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/auth'
 import { ok, err } from '@/lib/response'
+import { audit } from '@/lib/audit'
 
 const VALID_ACTIONS = ['released', 'deleted', 'false_positive', 'escalated']
 
@@ -25,6 +26,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       data: { reportId: id, adminId: user.id, action, notes: notes ?? null },
     }),
   ])
+
+  audit(req, { userId: user.id, userEmail: user.email, action: `report.${action}`, resource: `report:${id}`, detail: notes ?? null })
 
   return ok({ message: `Report marked as ${action}`, report_id: id })
 }

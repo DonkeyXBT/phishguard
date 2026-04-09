@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { analyzeEmail } from '@/lib/analyzer'
 import { getApiKeyOrg, apiKeyFromRequest } from '@/lib/auth'
 import { ok, err } from '@/lib/response'
+import { isShortUrl, resolveUrl } from '@/lib/url-resolver'
+import { notifyHighRisk } from '@/lib/notifications'
 
 function extractDomain(sender?: string | null) {
   if (!sender) return null
@@ -24,7 +26,23 @@ export async function POST(req: NextRequest) {
     bodyText: body.email_body_text,
     bodyHtml: body.email_body_html,
     attachments: body.attachments ?? [],
+    rawHeaders: body.raw_headers ?? body.headers ?? null,
   })
+
+  // Resolve shortened URLs in the background (best-effort)
+  const linksWithFinal = await Promise.all(
+    result.links.map(async l => {
+      if (l.url && isShortUrl(l.url)) {
+        try {
+          const resolved = await resolveUrl(l.url)
+          return { ...l, finalUrl: resolved.finalUrl }
+        } catch {
+          return { ...l, finalUrl: null as string | null }
+        }
+      }
+      return { ...l, finalUrl: null as string | null }
+    }),
+  )
 
   const report = await prisma.emailReport.create({
     data: {
@@ -43,9 +61,10 @@ export async function POST(req: NextRequest) {
       signals: result.signals as unknown as import('@prisma/client').Prisma.InputJsonValue,
       source: body.source ?? 'user_report',
       links: {
-        create: result.links.map(l => ({
+        create: linksWithFinal.map(l => ({
           displayText: l.displayText,
           url: l.url,
+          finalUrl: l.finalUrl,
           domain: l.domain,
           isSuspicious: l.isSuspicious,
           riskReason: l.riskReason,
@@ -62,6 +81,20 @@ export async function POST(req: NextRequest) {
     },
     include: { links: true, attachments: true, actions: true },
   })
+
+  // Fire alert for high-risk reports (non-blocking)
+  if (result.riskLevel === 'high' || result.riskLevel === 'critical') {
+    notifyHighRisk({
+      reportId: report.id,
+      sender: body.sender ?? null,
+      subject: body.subject ?? null,
+      riskScore: result.riskScore,
+      riskLevel: result.riskLevel,
+      signalCount: result.signals.length,
+      reporterEmail: body.reporter_email,
+      summary: result.summary,
+    }).catch(() => {})
+  }
 
   return ok(report, 201)
 }

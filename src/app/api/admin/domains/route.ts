@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/auth'
 import { ok, err } from '@/lib/response'
+import { audit } from '@/lib/audit'
 
 export async function GET(req: NextRequest) {
   const user = await getAuthUser(req)
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
     const entry = await prisma.domainList.create({
       data: { domain: clean, listType, reason: reason?.trim() || null },
     })
+    audit(req, { userId: user.id, userEmail: user.email, action: 'domain.add', resource: `domain:${clean}`, detail: `Added to ${listType}` })
     return ok(entry, 201)
   } catch {
     return err(`${clean} is already on the ${listType}`)

@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
     bodyText:    body.body_text,
     bodyHtml:    body.body_html,
     attachments: body.attachments ?? [],
+    rawHeaders:  body.raw_headers ?? body.headers ?? null,
   })
 
   // ── Domain list override ──────────────────────────────────────────────────
@@ -50,9 +51,10 @@ export async function POST(req: NextRequest) {
   }
 
   return ok({
-    risk_score: result.riskScore,
-    risk_level: result.riskLevel,
-    signals:    result.signals,
-    summary:    result.summary,
+    risk_score:  result.riskScore,
+    risk_level:  result.riskLevel,
+    signals:     result.signals,
+    summary:     result.summary,
+    email_auth:  result.emailAuth ?? null,
   })
 }

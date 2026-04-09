@@ -15,7 +15,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash)
 }
 
-export async function createToken(payload: { sub: string; orgId: string; isAdmin: boolean }): Promise<string> {
+export async function createToken(payload: { sub: string; orgId: string; isAdmin: boolean; role?: string }): Promise<string> {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/auth'
 import { ok, err } from '@/lib/response'
+import { audit } from '@/lib/audit'
 import { randomBytes } from 'crypto'
 
 export async function GET(req: NextRequest) {
@@ -34,5 +35,6 @@ export async function POST(req: NextRequest) {
     include: { _count: { select: { users: true, reports: true } } },
   })
 
+  audit(req, { userId: user.id, userEmail: user.email, action: 'org.create', resource: `org:${created.id}`, detail: `Created org "${name.trim()}"` })
   return ok(org, 201)
 }

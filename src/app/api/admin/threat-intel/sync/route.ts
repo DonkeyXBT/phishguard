@@ -90,6 +90,42 @@ export async function POST(req: NextRequest) {
     results.phishtank = { added: 0, error: String(e) }
   }
 
+  // ── URLhaus (abuse.ch) ─────────────────────────────────────────────────
+  try {
+    const res = await fetch('https://urlhaus.abuse.ch/downloads/text_online/', {
+      headers: { 'User-Agent': 'PhishGuard-ThreatIntel/1.0' },
+      signal: AbortSignal.timeout(15_000),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+    const text = await res.text()
+    const domains = Array.from(new Set(
+      text.split('\n')
+        .filter(line => line.startsWith('http'))
+        .map(line => {
+          try {
+            return new URL(line.trim()).hostname.toLowerCase().replace(/^www\./, '')
+          } catch { return null }
+        })
+        .filter((d): d is string => !!d && d.length > 3 && d.includes('.'))
+    ))
+
+    const data = domains.map(domain => ({
+      domain,
+      listType: 'blacklist' as const,
+      source:   'urlhaus',
+      reason:   'URLhaus (abuse.ch) active threat feed',
+    }))
+
+    const { count } = await prisma.domainList.createMany({
+      data,
+      skipDuplicates: true,
+    })
+    results.urlhaus = { added: count }
+  } catch (e) {
+    results.urlhaus = { added: 0, error: String(e) }
+  }
+
   const totalAdded = Object.values(results).reduce((s, r) => s + r.added, 0)
   return ok({ synced_at: new Date().toISOString(), total_added: totalAdded, sources: results })
 }

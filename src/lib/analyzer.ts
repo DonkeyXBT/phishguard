@@ -1,3 +1,7 @@
+import { parseEmailAuth, type EmailAuthResult } from './email-auth'
+import { getClassifier } from './ml-scorer'
+import { detectEncryption } from './encrypted-email'
+
 const KNOWN_BRANDS = [
   'paypal','microsoft','apple','amazon','google','facebook','instagram',
   'netflix','spotify','bank','chase','wellsfargo','citibank','hsbc',
@@ -115,6 +119,8 @@ export interface AnalysisResult {
   links: AnalyzedLink[]
   attachments: AnalyzedAttachment[]
   summary: string
+  emailAuth: EmailAuthResult | null
+  mlScore: { probability: number; confidence: number } | null
 }
 
 const SIGNAL_DEFS: Record<string, { label: string; description: string; score: number; severity: AnalysisSignal['severity'] }> = {
@@ -135,6 +141,12 @@ const SIGNAL_DEFS: Record<string, { label: string; description: string; score: n
   DANGEROUS_ATTACHMENT_TYPE:  { label: 'Dangerous Attachment', description: 'Email contains an attachment type used to deliver malware', score: 40, severity: 'critical' },
   OFFICE_WITH_MACROS:         { label: 'Macro-Enabled Document', description: 'Attachment may contain malicious macros', score: 25, severity: 'danger' },
   ARCHIVE_WITH_EXECUTABLE:    { label: 'Archive Attachment', description: 'Archive attachment may contain executables', score: 30, severity: 'danger' },
+  SPF_FAIL:                   { label: 'SPF Failed', description: 'Sender IP not authorized by domain\'s SPF record', score: 25, severity: 'danger' },
+  DKIM_FAIL:                  { label: 'DKIM Failed', description: 'Email DKIM signature verification failed', score: 25, severity: 'danger' },
+  DMARC_FAIL:                 { label: 'DMARC Failed', description: 'Email failed DMARC alignment checks', score: 30, severity: 'danger' },
+  MISSING_AUTH:               { label: 'No Email Authentication', description: 'Email lacks SPF/DKIM/DMARC authentication data', score: 15, severity: 'warning' },
+  ML_HIGH_PHISH:              { label: 'ML Phishing Score', description: 'Machine learning model rates this email as likely phishing', score: 20, severity: 'warning' },
+  ENCRYPTED_BODY:             { label: 'Encrypted Email', description: 'Email body is encrypted and cannot be fully inspected', score: 10, severity: 'info' },
 }
 
 export function analyzeEmail(params: {
@@ -144,6 +156,7 @@ export function analyzeEmail(params: {
   bodyText?: string | null
   bodyHtml?: string | null
   attachments?: Array<{ filename?: string; contentType?: string }>
+  rawHeaders?: Record<string, string> | string | null
 }): AnalysisResult {
   const signals: AnalysisSignal[] = []
   let score = 0
@@ -191,6 +204,31 @@ export function analyzeEmail(params: {
           addSignal('FREE_EMAIL_IMPERSONATION', `Free email (${senderDomain}) used to impersonate a company`)
           break
         }
+      }
+    }
+  }
+
+  // --- SPF / DKIM / DMARC checks ---
+  let emailAuth: EmailAuthResult | null = null
+  if (params.rawHeaders) {
+    emailAuth = parseEmailAuth(params.rawHeaders)
+
+    const allUnknown =
+      emailAuth.spf.status === 'unknown' &&
+      emailAuth.dkim.status === 'unknown' &&
+      emailAuth.dmarc.status === 'unknown'
+
+    if (allUnknown) {
+      addSignal('MISSING_AUTH', 'No SPF/DKIM/DMARC results found in headers')
+    } else {
+      if (emailAuth.spf.status === 'fail' || emailAuth.spf.status === 'softfail') {
+        addSignal('SPF_FAIL', emailAuth.spf.detail)
+      }
+      if (emailAuth.dkim.status === 'fail') {
+        addSignal('DKIM_FAIL', emailAuth.dkim.detail)
+      }
+      if (emailAuth.dmarc.status === 'fail') {
+        addSignal('DMARC_FAIL', emailAuth.dmarc.detail)
       }
     }
   }
@@ -243,10 +281,14 @@ export function analyzeEmail(params: {
         } else if (isIpAddress(domain)) {
           addSignal('IP_ADDRESS_URL', `Raw IP: ${domain}`)
           entry.isSuspicious = true; entry.riskReason = 'IP address URL'
-        } else if (SUSPICIOUS_TLDS.some(t => domain.endsWith(t))) {
-          const tld = SUSPICIOUS_TLDS.find(t => domain.endsWith(t))!
-          addSignal('SUSPICIOUS_TLD', `Domain ends with '${tld}'`)
-          entry.isSuspicious = true; entry.riskReason = `suspicious TLD ${tld}`
+        } else {
+          // Extract the actual TLD (last dot-segment) to avoid false matches
+          const domainParts = domain.split('.')
+          const actualTld = domainParts.length >= 2 ? '.' + domainParts[domainParts.length - 1] : ''
+          if (SUSPICIOUS_TLDS.includes(actualTld)) {
+            addSignal('SUSPICIOUS_TLD', `Domain uses '${actualTld}' TLD`)
+            entry.isSuspicious = true; entry.riskReason = `suspicious TLD ${actualTld}`
+          }
         }
       }
       analyzedLinks.push(entry)
@@ -271,6 +313,34 @@ export function analyzeEmail(params: {
     analyzedAttachments.push(entry)
   }
 
+  // --- Encryption detection ---
+  const encryption = detectEncryption({
+    headers: typeof params.rawHeaders === 'object' && params.rawHeaders !== null
+      ? params.rawHeaders as Record<string, string>
+      : null,
+    bodyText: params.bodyText,
+    attachments: params.attachments,
+  })
+  if (encryption.isEncrypted) {
+    addSignal('ENCRYPTED_BODY', encryption.detail)
+  }
+
+  // --- ML scoring ---
+  let mlScore: { probability: number; confidence: number } | null = null
+  const combinedText = [params.subject ?? '', params.bodyText ?? ''].join(' ').trim()
+  if (combinedText.length > 20) {
+    try {
+      const classifier = getClassifier()
+      const ml = classifier.score(combinedText)
+      mlScore = { probability: ml.probability, confidence: ml.confidence }
+      if (ml.probability >= 0.75 && ml.confidence >= 0.3) {
+        addSignal('ML_HIGH_PHISH', `ML probability: ${(ml.probability * 100).toFixed(0)}% (confidence: ${(ml.confidence * 100).toFixed(0)}%)`)
+      }
+    } catch {
+      // ML scoring is best-effort
+    }
+  }
+
   // --- Finalize ---
   const finalScore = Math.min(score, 100)
   const riskLevel: AnalysisResult['riskLevel'] =
@@ -282,5 +352,5 @@ export function analyzeEmail(params: {
     ? `High confidence phishing attempt. ${signals.length} suspicious signals detected.`
     : `Some indicators found. ${signals.length} signal(s) detected — review carefully.`
 
-  return { riskScore: finalScore, riskLevel, signals, links: analyzedLinks, attachments: analyzedAttachments, summary }
+  return { riskScore: finalScore, riskLevel, signals, links: analyzedLinks, attachments: analyzedAttachments, summary, emailAuth, mlScore }
 }
