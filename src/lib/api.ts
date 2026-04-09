@@ -25,8 +25,8 @@ export const api = {
   delete: (path: string)               => request(path, { method: 'DELETE' }),
 
   // Named helpers
-  login: (email: string, password: string) =>
-    request('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  login: (email: string, password: string, mfa_code?: string) =>
+    request('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password, mfa_code }) }),
   me: () => request('/api/auth/me'),
   setup: () => request('/api/auth/setup', { method: 'POST' }),
   getStats: () => request('/api/admin/stats'),
@@ -42,4 +42,15 @@ export const api = {
   syncThreatIntel: () => request('/api/admin/threat-intel/sync', { method: 'POST' }),
   reviewReport: (id: string, action: string, notes?: string) =>
     request(`/api/admin/reports/${id}/review`, { method: 'PUT', body: JSON.stringify({ action, notes }) }),
+
+  // Audit
+  getAuditLogs: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+    return request(`/api/admin/audit${qs}`)
+  },
+
+  // MFA
+  mfaSetup:   () => request('/api/auth/mfa/setup', { method: 'POST' }),
+  mfaVerify:  (code: string) => request('/api/auth/mfa/verify', { method: 'POST', body: JSON.stringify({ code }) }),
+  mfaDisable: (password: string) => request('/api/auth/mfa/disable', { method: 'POST', body: JSON.stringify({ password }) }),
 }
