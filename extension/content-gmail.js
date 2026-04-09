@@ -297,18 +297,28 @@ function analyzeEmailContainer(container) {
 
 function scanForEmails() {
   currentUserEmail = getUserEmail();
+
+  // If we already have a PhishGuard banner visible on this page, skip
+  if (document.querySelector('.phishguard-wrap, .phishguard-loading, .phishguard-cover')) return;
+
+  // Find the last (most recent) message container in the thread — only analyze that one
   const selectors = [
     '.adn.ads:not([data-phishguard-analyzed])',
     '.gs:not([data-phishguard-analyzed])',
     '[data-message-id]:not([data-phishguard-analyzed])',
     '.nH.hx:not([data-phishguard-analyzed])',
   ];
-  document.querySelectorAll(selectors.join(', '))
-    .forEach(el => {
-      if (el.querySelector('.a3s') || el.querySelector('.a3s.aiL') || el.querySelector('[data-message-id] .ii.gt div') || el.querySelector('.ii.gt')) {
-        analyzeEmailContainer(el);
-      }
-    });
+  const allContainers = document.querySelectorAll(selectors.join(', '));
+  // Pick only the last container (most recent message in the thread)
+  const containers = Array.from(allContainers).filter(el =>
+    el.querySelector('.a3s') || el.querySelector('.a3s.aiL') || el.querySelector('[data-message-id] .ii.gt div') || el.querySelector('.ii.gt')
+  );
+  const target = containers[containers.length - 1];
+  if (target) {
+    // Mark all containers as analyzed so we don't process them again
+    containers.forEach(el => el.setAttribute(ANALYZED_ATTR, '1'));
+    analyzeEmailContainer(target);
+  }
 }
 
 // ── Track email switches (Gmail SPA navigation) ──────────────────────────────
