@@ -11,3 +11,5 @@ backend/.venv/
 prisma/migrations/
 
 .vercel
+.superpowers/
+.claude/

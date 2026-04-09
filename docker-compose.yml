@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: phishing_detector
+      POSTGRES_DB: phishguard
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
@@ -18,27 +18,34 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
-    build: ./backend
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "3000:3000"
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/phishing_detector
-      SECRET_KEY: phishguard-change-this-in-production
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/phishguard
+      DIRECT_URL: postgresql://postgres:postgres@db:5432/phishguard
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      NODE_ENV: production
+      # Optional integrations (set in .env):
+      # ALERT_WEBHOOK_URL=https://hooks.slack.com/...
+      # ALERT_EMAIL_TO=security@company.com
+      # SMTP_HOST=smtp.example.com
+      # SMTP_PORT=587
+      # SMTP_USER=...
+      # SMTP_PASS=...
+      # VIRUSTOTAL_API_KEY=...
+      # PHISH_MODEL_PATH=/app/data/model.json
     volumes:
-      - ./backend:/app
-
-  frontend:
-    build: ./frontend/admin
-    restart: unless-stopped
-    depends_on:
-      - backend
-    ports:
-      - "80:80"
+      - app_data:/app/data
 
 volumes:
   pgdata:
+  app_data:

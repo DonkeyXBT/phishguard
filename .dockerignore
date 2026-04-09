@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+*.md
+backend
+frontend
+extension
+outlook-addin
+tests
+.env*
