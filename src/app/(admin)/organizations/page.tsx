@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
+import { Plus, Building2, Copy, Check, RotateCcw, Trash2, BookOpen, X } from 'lucide-react'
 
 interface Org {
   id: string
@@ -28,54 +29,56 @@ function SetupCard({ org, onClose }: { org: Org; onClose: () => void }) {
   ]
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-lg shadow-2xl">
-        <div className="p-6 border-b border-gray-800 flex items-start justify-between">
+    <div className="fixed inset-0 bg-[var(--bg-overlay)] flex items-center justify-center z-50 p-4 modal-overlay">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-2xl w-full max-w-lg shadow-[var(--shadow-lg)] modal-content">
+        <div className="p-6 border-b border-[var(--border-secondary)] flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-bold text-white">Extension Setup</h2>
-            <p className="text-sm text-gray-400 mt-0.5">{org.name}</p>
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">Extension Setup</h2>
+            <p className="text-sm text-[var(--text-tertiary)] mt-0.5">{org.name}</p>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white text-xl leading-none">×</button>
+          <button onClick={onClose} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] p-1 rounded-lg hover:bg-[var(--bg-hover)] transition-colors">
+            <X size={18} />
+          </button>
         </div>
 
         <div className="p-6 space-y-4">
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-[var(--text-secondary)]">
             Share these values with users in this organization. They paste them into the PhishGuard browser extension popup.
           </p>
 
           {fields.map(f => (
             <div key={f.label}>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{f.label}</label>
+                <label className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">{f.label}</label>
                 <button
                   onClick={() => copy(f.value, f.label)}
-                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors flex items-center gap-1"
                 >
-                  {copied === f.label ? '✅ Copied' : 'Copy'}
+                  {copied === f.label ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
                 </button>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 font-mono text-sm text-green-400 break-all select-all">
+              <div className="bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5 font-mono text-sm text-emerald-700 dark:text-emerald-400 break-all select-all">
                 {f.value}
               </div>
-              <p className="text-xs text-gray-500 mt-1">{f.desc}</p>
+              <p className="text-xs text-[var(--text-tertiary)] mt-1">{f.desc}</p>
             </div>
           ))}
 
-          <div className="bg-gray-800/60 border border-gray-700 rounded-lg p-4 mt-2">
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Extension setup steps</div>
-            <ol className="text-sm text-gray-300 space-y-1 list-decimal list-inside">
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg p-4 mt-2">
+            <div className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-2">Extension setup steps</div>
+            <ol className="text-sm text-[var(--text-secondary)] space-y-1 list-decimal list-inside">
               <li>Install the PhishGuard Chrome extension</li>
               <li>Click the PhishGuard icon in the browser toolbar</li>
-              <li>Paste the <span className="text-white font-medium">Server URL</span> above</li>
-              <li>Paste the <span className="text-white font-medium">API Key</span> above</li>
-              <li>Click <span className="text-white font-medium">Save Settings</span></li>
+              <li>Paste the <span className="text-[var(--text-primary)] font-medium">Server URL</span> above</li>
+              <li>Paste the <span className="text-[var(--text-primary)] font-medium">API Key</span> above</li>
+              <li>Click <span className="text-[var(--text-primary)] font-medium">Save Settings</span></li>
             </ol>
           </div>
         </div>
 
         <div className="p-6 pt-0">
           <button onClick={onClose}
-            className="w-full bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-lg py-2.5 transition-colors">
+            className="btn-press w-full bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] text-sm font-semibold rounded-lg py-2.5">
             Close
           </button>
         </div>
@@ -104,32 +107,34 @@ function CreateOrgModal({ onCreated, onClose }: { onCreated: (org: Org) => void;
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-md shadow-2xl">
-        <div className="p-6 border-b border-gray-800 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white">New Organization</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-white text-xl leading-none">×</button>
+    <div className="fixed inset-0 bg-[var(--bg-overlay)] flex items-center justify-center z-50 p-4 modal-overlay">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-2xl w-full max-w-md shadow-[var(--shadow-lg)] modal-content">
+        <div className="p-6 border-b border-[var(--border-secondary)] flex items-center justify-between">
+          <h2 className="text-lg font-bold text-[var(--text-primary)]">New Organization</h2>
+          <button onClick={onClose} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] p-1 rounded-lg hover:bg-[var(--bg-hover)] transition-colors">
+            <X size={18} />
+          </button>
         </div>
         <form onSubmit={submit} className="p-6 space-y-4">
-          {error && <div className="bg-red-950 border border-red-800 text-red-400 text-sm rounded-lg p-3">{error}</div>}
+          {error && <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm rounded-lg p-3">{error}</div>}
           <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Organization Name</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5">Organization Name</label>
             <input
               autoFocus
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Acme Corp"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
+              className="w-full bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5 text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
               required
             />
           </div>
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose}
-              className="flex-1 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-lg py-2.5 transition-colors">
+              className="btn-press flex-1 bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] text-sm font-semibold rounded-lg py-2.5">
               Cancel
             </button>
             <button type="submit" disabled={loading}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg py-2.5 transition-colors">
+              className="btn-press flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg py-2.5">
               {loading ? 'Creating...' : 'Create Organization'}
             </button>
           </div>
@@ -169,7 +174,6 @@ export default function OrganizationsPage() {
     const data = await res.json()
     setOrgs(prev => prev.map(o => o.id === org.id ? { ...o, apiKey: data.api_key } : o))
     setRotating(null)
-    // Show setup card with new key
     setSetupOrg(orgs.find(o => o.id === org.id) ? { ...org, apiKey: data.api_key } : null)
   }
 
@@ -188,22 +192,22 @@ export default function OrganizationsPage() {
 
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white">Organizations</h1>
-          <p className="text-gray-400 text-sm mt-1">Manage organizations and their extension credentials</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Organizations</h1>
+          <p className="text-[var(--text-tertiary)] text-sm mt-1">Manage organizations and their extension credentials</p>
         </div>
         <button
           onClick={() => setCreating(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg px-4 py-2.5 transition-colors flex items-center gap-2"
+          className="btn-press bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg px-4 py-2.5 flex items-center gap-2 shadow-sm"
         >
-          + New Organization
+          <Plus size={16} /> New Organization
         </button>
       </div>
 
-      {loading && <div className="text-center py-16 text-gray-500">Loading...</div>}
+      {loading && <div className="text-center py-16 text-[var(--text-tertiary)]">Loading...</div>}
 
       {!loading && orgs.length === 0 && (
-        <div className="text-center py-16 text-gray-500">
-          <div className="text-4xl mb-3">🏢</div>
+        <div className="text-center py-16 text-[var(--text-tertiary)]">
+          <Building2 size={40} className="mx-auto mb-3 opacity-40" />
           <div className="font-medium">No organizations yet</div>
           <div className="text-sm mt-1">Create one to get extension setup credentials</div>
         </div>
@@ -211,23 +215,21 @@ export default function OrganizationsPage() {
 
       <div className="space-y-4">
         {orgs.map(org => (
-          <div key={org.id} className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+          <div key={org.id} className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-primary)] p-5 shadow-[var(--shadow-sm)]">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-lg">🏢</span>
-                  <h3 className="font-semibold text-white">{org.name}</h3>
+                  <Building2 size={18} className="text-[var(--text-tertiary)]" />
+                  <h3 className="font-semibold text-[var(--text-primary)]">{org.name}</h3>
                 </div>
-                <div className="flex gap-4 text-xs text-gray-500 mb-3">
+                <div className="flex gap-4 text-xs text-[var(--text-tertiary)] mb-3">
                   <span>{org._count.users} user{org._count.users !== 1 ? 's' : ''}</span>
                   <span>{org._count.reports} report{org._count.reports !== 1 ? 's' : ''}</span>
                   <span>Created {new Date(org.createdAt).toLocaleDateString()}</span>
                 </div>
-
-                {/* API key preview */}
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">API Key:</span>
-                  <code className="text-xs text-gray-400 font-mono bg-gray-800 px-2 py-0.5 rounded">
+                  <span className="text-xs text-[var(--text-tertiary)]">API Key:</span>
+                  <code className="text-xs text-[var(--text-secondary)] font-mono bg-[var(--bg-tertiary)] px-2 py-0.5 rounded">
                     {org.apiKey.substring(0, 8)}••••••••{org.apiKey.substring(org.apiKey.length - 4)}
                   </code>
                 </div>
@@ -236,23 +238,23 @@ export default function OrganizationsPage() {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => setSetupOrg(org)}
-                  className="bg-green-700 hover:bg-green-600 text-white text-xs font-semibold rounded-lg px-3 py-2 transition-colors"
+                  className="btn-press bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold rounded-lg px-3 py-2 flex items-center gap-1.5"
                 >
-                  📋 Setup Guide
+                  <BookOpen size={14} /> Setup Guide
                 </button>
                 <button
                   onClick={() => handleRotateKey(org)}
                   disabled={rotating === org.id}
-                  className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 text-xs font-semibold rounded-lg px-3 py-2 transition-colors"
+                  className="btn-press bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] disabled:opacity-50 text-[var(--text-secondary)] border border-[var(--border-primary)] text-xs font-semibold rounded-lg px-3 py-2 flex items-center gap-1.5"
                 >
-                  {rotating === org.id ? 'Rotating...' : '🔄 Rotate Key'}
+                  <RotateCcw size={14} /> {rotating === org.id ? 'Rotating...' : 'Rotate Key'}
                 </button>
                 <button
                   onClick={() => handleDelete(org)}
                   disabled={deleting === org.id}
-                  className="bg-gray-800 hover:bg-red-900/50 disabled:opacity-50 text-gray-400 hover:text-red-400 text-xs font-semibold rounded-lg px-3 py-2 transition-colors"
+                  className="btn-press bg-[var(--bg-secondary)] hover:bg-red-50 dark:hover:bg-red-950/40 disabled:opacity-50 text-[var(--text-tertiary)] hover:text-red-600 dark:hover:text-red-400 border border-[var(--border-primary)] hover:border-red-200 dark:hover:border-red-800 text-xs font-semibold rounded-lg px-3 py-2"
                 >
-                  {deleting === org.id ? '...' : '🗑️'}
+                  <Trash2 size={14} />
                 </button>
               </div>
             </div>

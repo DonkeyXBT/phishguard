@@ -3,11 +3,14 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
+import { Shield } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('admin@company.com')
-  const [password, setPassword] = useState('admin123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [mfaCode, setMfaCode] = useState('')
+  const [mfaRequired, setMfaRequired] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [setupMsg, setSetupMsg] = useState('')
@@ -16,9 +19,10 @@ export default function LoginPage() {
     e.preventDefault()
     setError(''); setLoading(true)
     try {
-      const res = await api.login(email, password)
+      const res = await api.login(email, password, mfaRequired ? mfaCode : undefined)
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Login failed'); return }
+      if (data.mfa_required) { setMfaRequired(true); return }
       localStorage.setItem('token', data.access_token)
       router.push('/dashboard')
     } catch {
@@ -36,33 +40,53 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-secondary)]">
+      <div className="w-full max-w-sm page-enter">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-red-600 rounded-2xl mb-4 text-2xl">🛡️</div>
-          <h1 className="text-2xl font-bold text-white">PhishGuard</h1>
-          <p className="text-gray-400 text-sm mt-1">Admin Console</p>
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-700 to-blue-500 rounded-2xl mb-4 shadow-lg shadow-blue-500/20">
+            <Shield size={28} className="text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">PhishGuard</h1>
+          <p className="text-[var(--text-tertiary)] text-sm mt-1">Admin Console</p>
         </div>
-        <form onSubmit={handleLogin} className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-4">
-          {error && <div className="bg-red-950 border border-red-800 text-red-400 text-sm rounded-lg p-3">{error}</div>}
-          {setupMsg && <div className="bg-green-950 border border-green-800 text-green-400 text-xs rounded-lg p-3 break-all">{setupMsg}</div>}
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500" required />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-1.5">Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500" required />
-          </div>
+        <form onSubmit={handleLogin} className="bg-[var(--bg-card)] rounded-2xl p-6 border border-[var(--border-primary)] shadow-[var(--shadow-md)] space-y-4">
+          {error && <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm rounded-lg p-3">{error}</div>}
+          {setupMsg && <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-xs rounded-lg p-3 break-all">{setupMsg}</div>}
+
+          {!mfaRequired ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5">Email</label>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@company.com"
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5 text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5">Password</label>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password"
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5 text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" required />
+              </div>
+            </>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5">MFA Code</label>
+              <p className="text-xs text-[var(--text-tertiary)] mb-2">Enter the 6-digit code from your authenticator app</p>
+              <input type="text" value={mfaCode} onChange={e => setMfaCode(e.target.value)} placeholder="000000"
+                maxLength={6} pattern="[0-9]{6}" autoFocus
+                className="w-full bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5 text-[var(--text-primary)] text-sm text-center tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" required />
+              <button type="button" onClick={() => { setMfaRequired(false); setMfaCode(''); setError('') }}
+                className="text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] mt-2">
+                Back to login
+              </button>
+            </div>
+          )}
+
           <button type="submit" disabled={loading}
-            className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold rounded-lg py-2.5 text-sm transition-colors">
-            {loading ? 'Signing in...' : 'Sign in'}
+            className="btn-press w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg py-2.5 text-sm shadow-sm">
+            {loading ? 'Signing in...' : mfaRequired ? 'Verify' : 'Sign in'}
           </button>
         </form>
         <div className="mt-4 text-center">
-          <button onClick={handleSetup} className="text-xs text-gray-500 hover:text-gray-400 underline">
+          <button onClick={handleSetup} className="text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] underline">
             First time? Run initial setup
           </button>
         </div>

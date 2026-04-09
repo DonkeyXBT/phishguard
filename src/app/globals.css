@@ -2,6 +2,206 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --bg-card: #ffffff;
+    --bg-sidebar: #ffffff;
+    --bg-input: #ffffff;
+    --bg-hover: #f1f5f9;
+    --bg-active: #eff6ff;
+    --bg-overlay: rgba(0, 0, 0, 0.5);
+
+    --border-primary: #e2e8f0;
+    --border-secondary: #f1f5f9;
+    --border-active: #bfdbfe;
+
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-tertiary: #94a3b8;
+    --text-inverted: #ffffff;
+    --text-active: #1e40af;
+
+    --accent-primary: #2563eb;
+    --accent-primary-hover: #1d4ed8;
+    --accent-light: #eff6ff;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+    /* Custom easing curves */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .dark {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --bg-card: #1e293b;
+    --bg-sidebar: #0f172a;
+    --bg-input: #1e293b;
+    --bg-hover: #334155;
+    --bg-active: rgba(37, 99, 235, 0.15);
+    --bg-overlay: rgba(0, 0, 0, 0.7);
+
+    --border-primary: #334155;
+    --border-secondary: #1e293b;
+    --border-active: #1e40af;
+
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-tertiary: #64748b;
+    --text-inverted: #0f172a;
+    --text-active: #60a5fa;
+
+    --accent-primary: #3b82f6;
+    --accent-primary-hover: #2563eb;
+    --accent-light: rgba(59, 130, 246, 0.15);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+}
+
 body {
-  @apply bg-gray-950 text-gray-100;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out);
+}
+
+/* ─── Button press feedback ─── */
+@layer utilities {
+  .btn-press {
+    transition: transform 150ms var(--ease-out), background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
+  }
+  .btn-press:active {
+    transform: scale(0.97);
+  }
+}
+
+/* ─── Interactive row hover (only for pointer devices) ─── */
+@media (hover: hover) and (pointer: fine) {
+  .row-hover {
+    transition: transform 200ms var(--ease-out), background-color 150ms ease;
+  }
+  .row-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+  .dark .row-hover:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* ─── Modal overlay + content animation ─── */
+.modal-overlay {
+  animation: overlayIn 200ms var(--ease-out);
+}
+.modal-content {
+  animation: modalIn 250ms var(--ease-out);
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ─── Stagger animation for cards and rows ─── */
+.stagger-in > * {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: staggerFadeIn 350ms var(--ease-out) forwards;
+}
+.stagger-in > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-in > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-in > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-in > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-in > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-in > *:nth-child(6) { animation-delay: 250ms; }
+.stagger-in > *:nth-child(7) { animation-delay: 300ms; }
+.stagger-in > *:nth-child(8) { animation-delay: 350ms; }
+
+@keyframes staggerFadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Page content fade-in ─── */
+.page-enter {
+  animation: pageIn 300ms var(--ease-out);
+}
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Focus ring transitions ─── */
+input, textarea, select {
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+/* ─── Nav link transitions ─── */
+.nav-link {
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+/* ─── Filter pill transition ─── */
+.filter-pill {
+  transition: background-color 150ms var(--ease-out), color 150ms ease, box-shadow 150ms ease;
+}
+
+/* ─── Progress bar animation ─── */
+.bar-fill {
+  transition: width 600ms var(--ease-in-out);
+}
+
+/* ─── Risk score bar animation ─── */
+.score-bar {
+  transition: width 800ms var(--ease-in-out);
+}
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .stagger-in > * {
+    opacity: 1;
+    transform: none;
+  }
+
+  .row-hover:hover {
+    transform: none !important;
+  }
+
+  .btn-press:active {
+    transform: none;
+  }
 }

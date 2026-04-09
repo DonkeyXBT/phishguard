@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import RiskBadge from '@/components/RiskBadge'
 import StatusBadge from '@/components/StatusBadge'
+import { RefreshCw, Inbox } from 'lucide-react'
 
 interface Report {
   id: string; reporterEmail: string; subject: string | null; sender: string | null
@@ -45,59 +46,74 @@ export default function QueuePage() {
     <div className="p-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Review Queue</h1>
-          <p className="text-gray-400 text-sm mt-1">{reports.length} reports</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Review Queue</h1>
+          <p className="text-[var(--text-tertiary)] text-sm mt-1">{reports.length} reports</p>
         </div>
-        <button onClick={load} className="text-sm text-blue-400 hover:text-blue-300">Refresh</button>
+        <button onClick={load} className="btn-press text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1.5">
+          <RefreshCw size={14} /> Refresh
+        </button>
       </div>
 
+      {/* Filters */}
       <div className="flex gap-3 mb-6 flex-wrap">
-        <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1">
+        <div className="flex gap-1 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg p-1 shadow-[var(--shadow-sm)]">
           {STATUS_FILTERS.map(s => (
             <button key={s} onClick={() => setStatus(s)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors capitalize ${status === s ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}>
+              className={`filter-pill px-3 py-1.5 rounded-md text-xs font-medium capitalize ${
+                status === s
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
+              }`}>
               {s || 'All'}
             </button>
           ))}
         </div>
-        <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1">
+        <div className="flex gap-1 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg p-1 shadow-[var(--shadow-sm)]">
           {RISK_FILTERS.map(r => (
             <button key={r} onClick={() => setRisk(r)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors capitalize ${risk === r ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}>
+              className={`filter-pill px-3 py-1.5 rounded-md text-xs font-medium capitalize ${
+                risk === r
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
+              }`}>
               {r || 'All Risk'}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-        {loading && <div className="p-8 text-center text-gray-500">Loading...</div>}
+      {/* Table */}
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-primary)] overflow-hidden shadow-[var(--shadow-sm)]">
+        {loading && <div className="p-8 text-center text-[var(--text-tertiary)]">Loading...</div>}
         {!loading && reports.length === 0 && (
-          <div className="p-8 text-center text-gray-500"><div className="text-3xl mb-2">📭</div>No reports found</div>
+          <div className="p-12 text-center text-[var(--text-tertiary)]">
+            <Inbox size={36} className="mx-auto mb-3 opacity-40" />
+            <div className="font-medium">No reports found</div>
+          </div>
         )}
         {!loading && reports.length > 0 && (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-800 text-gray-400 text-xs uppercase tracking-wide">
-                <th className="text-left px-4 py-3">Subject / Sender</th>
-                <th className="text-left px-4 py-3">Reporter</th>
-                <th className="text-left px-4 py-3">Risk</th>
-                <th className="text-left px-4 py-3">Status</th>
-                <th className="text-left px-4 py-3">Reported</th>
+              <tr className="border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]">
+                <th className="text-left px-4 py-3 text-[var(--text-tertiary)] text-xs uppercase tracking-wide font-medium">Subject / Sender</th>
+                <th className="text-left px-4 py-3 text-[var(--text-tertiary)] text-xs uppercase tracking-wide font-medium">Reporter</th>
+                <th className="text-left px-4 py-3 text-[var(--text-tertiary)] text-xs uppercase tracking-wide font-medium">Risk</th>
+                <th className="text-left px-4 py-3 text-[var(--text-tertiary)] text-xs uppercase tracking-wide font-medium">Status</th>
+                <th className="text-left px-4 py-3 text-[var(--text-tertiary)] text-xs uppercase tracking-wide font-medium">Reported</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-800">
+            <tbody className="divide-y divide-[var(--border-secondary)]">
               {reports.map(r => (
                 <tr key={r.id} onClick={() => router.push(`/queue/${r.id}`)}
-                  className="hover:bg-gray-800/50 cursor-pointer transition-colors">
+                  className="hover:bg-[var(--bg-hover)] cursor-pointer row-hover">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-white truncate max-w-xs">{r.subject ?? '(no subject)'}</div>
-                    <div className="text-gray-400 truncate max-w-xs">{r.sender ?? 'unknown'}</div>
+                    <div className="font-medium text-[var(--text-primary)] truncate max-w-xs">{r.subject ?? '(no subject)'}</div>
+                    <div className="text-[var(--text-tertiary)] truncate max-w-xs text-xs">{r.sender ?? 'unknown'}</div>
                   </td>
-                  <td className="px-4 py-3 text-gray-400">{r.reporterEmail}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)] text-xs">{r.reporterEmail}</td>
                   <td className="px-4 py-3"><RiskBadge level={r.riskLevel} score={r.riskScore} /></td>
                   <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
-                  <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{timeAgo(r.reportedAt)}</td>
+                  <td className="px-4 py-3 text-[var(--text-tertiary)] whitespace-nowrap text-xs">{timeAgo(r.reportedAt)}</td>
                 </tr>
               ))}
             </tbody>

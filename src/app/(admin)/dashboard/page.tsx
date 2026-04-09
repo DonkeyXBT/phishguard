@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import RiskBadge from '@/components/RiskBadge'
 import StatusBadge from '@/components/StatusBadge'
+import { Mail, Clock, CheckCircle, Trash2, AlertOctagon, BarChart3, ArrowRight } from 'lucide-react'
 
 interface Stats {
   total_reports: number
@@ -38,6 +39,15 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(h / 24)}d ago`
 }
 
+const accentColors: Record<string, string> = {
+  blue: 'border-l-blue-500',
+  amber: 'border-l-amber-500',
+  emerald: 'border-l-emerald-500',
+  slate: 'border-l-slate-400',
+  red: 'border-l-red-500',
+  violet: 'border-l-violet-500',
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [stats, setStats] = useState<Stats | null>(null)
@@ -49,51 +59,58 @@ export default function DashboardPage() {
   }, [])
 
   const statCards = stats ? [
-    { label: 'Total Reports',   value: stats.total_reports,  icon: '📨', color: 'text-blue-400' },
-    { label: 'Pending Review',  value: stats.pending_review,  icon: '⏳', color: 'text-yellow-400' },
-    { label: 'Released Today',  value: stats.released_today,  icon: '✅', color: 'text-green-400' },
-    { label: 'Deleted Today',   value: stats.deleted_today,   icon: '🗑️', color: 'text-gray-400' },
-    { label: 'High Risk Total', value: stats.high_risk_count, icon: '🚨', color: 'text-red-400' },
-    { label: 'Avg Risk Score',  value: stats.avg_risk_score,  icon: '📊', color: 'text-purple-400' },
+    { label: 'Total Reports',   value: stats.total_reports,  icon: Mail,         color: 'blue',    trend: null },
+    { label: 'Pending Review',  value: stats.pending_review,  icon: Clock,        color: 'amber',   trend: null },
+    { label: 'Released Today',  value: stats.released_today,  icon: CheckCircle,  color: 'emerald', trend: null },
+    { label: 'Deleted Today',   value: stats.deleted_today,   icon: Trash2,       color: 'slate',   trend: null },
+    { label: 'High Risk Total', value: stats.high_risk_count, icon: AlertOctagon, color: 'red',     trend: null },
+    { label: 'Avg Risk Score',  value: stats.avg_risk_score,  icon: BarChart3,    color: 'violet',  trend: null },
   ] : []
 
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-        <p className="text-gray-400 text-sm mt-1">Overview of phishing activity</p>
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Dashboard</h1>
+        <p className="text-[var(--text-tertiary)] text-sm mt-1">Overview of phishing activity</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        {statCards.map(card => (
-          <div key={card.label} className="bg-gray-900 rounded-xl border border-gray-800 p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-400">{card.label}</span>
-              <span className="text-xl">{card.icon}</span>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-3 gap-4 mb-8 stagger-in">
+        {statCards.map(card => {
+          const Icon = card.icon
+          return (
+            <div key={card.label} className={`bg-[var(--bg-card)] rounded-xl border border-[var(--border-primary)] border-l-[3px] ${accentColors[card.color]} p-5 shadow-[var(--shadow-sm)]`}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-[var(--text-secondary)]">{card.label}</span>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-${card.color === 'slate' ? 'slate' : card.color}-50 dark:bg-${card.color === 'slate' ? 'slate' : card.color}-950/40`}>
+                  <Icon size={16} className={`text-${card.color === 'slate' ? 'slate-500' : card.color + '-600'} dark:text-${card.color === 'slate' ? 'slate-400' : card.color + '-400'}`} />
+                </div>
+              </div>
+              <div className="text-3xl font-bold text-[var(--text-primary)]">{card.value}</div>
             </div>
-            <div className={`text-3xl font-bold ${card.color}`}>{card.value}</div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
+      {/* Risk Distribution */}
       {stats?.by_level && (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-5 mb-8">
-          <h2 className="font-semibold text-white mb-4">Risk Level Distribution</h2>
+        <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-primary)] p-5 mb-8 shadow-[var(--shadow-sm)]">
+          <h2 className="font-semibold text-[var(--text-primary)] mb-4">Risk Level Distribution</h2>
           <div className="flex gap-4">
             {(['critical','high','medium','low'] as const).map(level => {
               const count = stats.by_level[level] ?? 0
               const pct = stats.total_reports > 0 ? Math.round((count / stats.total_reports) * 100) : 0
+              const barColor = level === 'critical' ? 'bg-red-500' : level === 'high' ? 'bg-orange-500' : level === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
               return (
                 <div key={level} className="flex-1">
                   <div className="flex justify-between text-xs mb-1">
-                    <span className="capitalize text-gray-400">{level}</span>
-                    <span className="text-white">{count}</span>
+                    <span className="capitalize text-[var(--text-secondary)]">{level}</span>
+                    <span className="text-[var(--text-primary)] font-medium">{count}</span>
                   </div>
-                  <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${level === 'critical' ? 'bg-red-500' : level === 'high' ? 'bg-orange-500' : level === 'medium' ? 'bg-yellow-500' : 'bg-green-500'}`}
-                      style={{ width: `${pct}%` }} />
+                  <div className="h-2 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${barColor} bar-fill`} style={{ width: `${pct}%` }} />
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">{pct}%</div>
+                  <div className="text-xs text-[var(--text-tertiary)] mt-1">{pct}%</div>
                 </div>
               )
             })}
@@ -101,21 +118,24 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="bg-gray-900 rounded-xl border border-gray-800">
-        <div className="p-5 border-b border-gray-800 flex items-center justify-between">
-          <h2 className="font-semibold text-white">Recent Reports</h2>
-          <button onClick={() => router.push('/queue')} className="text-sm text-blue-400 hover:text-blue-300">View all →</button>
+      {/* Recent Reports */}
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-primary)] shadow-[var(--shadow-sm)]">
+        <div className="p-5 border-b border-[var(--border-secondary)] flex items-center justify-between">
+          <h2 className="font-semibold text-[var(--text-primary)]">Recent Reports</h2>
+          <button onClick={() => router.push('/queue')} className="btn-press text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1">
+            View all <ArrowRight size={14} />
+          </button>
         </div>
-        <div className="divide-y divide-gray-800">
-          {recent.length === 0 && <div className="p-8 text-center text-gray-500">No reports yet</div>}
+        <div className="divide-y divide-[var(--border-secondary)]">
+          {recent.length === 0 && <div className="p-8 text-center text-[var(--text-tertiary)]">No reports yet</div>}
           {recent.map(r => (
             <div key={r.id} onClick={() => router.push(`/queue/${r.id}`)}
-              className="p-4 hover:bg-gray-800/50 cursor-pointer transition-colors">
+              className="p-4 hover:bg-[var(--bg-hover)] cursor-pointer row-hover">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm text-white truncate">{r.subject ?? '(no subject)'}</div>
-                  <div className="text-xs text-gray-400 mt-0.5 truncate">From: {r.sender ?? 'unknown'}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">by {r.reporterEmail} · {timeAgo(r.reportedAt)}</div>
+                  <div className="font-medium text-sm text-[var(--text-primary)] truncate">{r.subject ?? '(no subject)'}</div>
+                  <div className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">From: {r.sender ?? 'unknown'}</div>
+                  <div className="text-xs text-[var(--text-tertiary)] mt-0.5">by {r.reporterEmail} · {timeAgo(r.reportedAt)}</div>
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
                   <RiskBadge level={r.riskLevel} score={r.riskScore} />
