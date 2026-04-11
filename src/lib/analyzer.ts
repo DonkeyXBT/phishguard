@@ -1,5 +1,5 @@
 import { parseEmailAuth, type EmailAuthResult } from './email-auth'
-import { getClassifier } from './ml-scorer'
+import { getClassifierSync } from './ml-scorer'
 import { detectEncryption } from './encrypted-email'
 
 const KNOWN_BRANDS = [
@@ -330,7 +330,7 @@ export function analyzeEmail(params: {
   const combinedText = [params.subject ?? '', params.bodyText ?? ''].join(' ').trim()
   if (combinedText.length > 20) {
     try {
-      const classifier = getClassifier()
+      const classifier = getClassifierSync()
       const ml = classifier.score(combinedText)
       mlScore = { probability: ml.probability, confidence: ml.confidence }
       if (ml.probability >= 0.75 && ml.confidence >= 0.3) {

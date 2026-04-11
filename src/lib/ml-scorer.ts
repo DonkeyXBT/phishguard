@@ -1,15 +1,13 @@
 /**
  * Naive Bayes text classifier for phishing detection.
  *
- * This supplements the rule-based analyzer with a statistical model trained
- * on labeled email text.  No external ML libraries required.
- *
- * The model can be trained incrementally and persisted as JSON.
- * In production, the trained model is loaded from PHISH_MODEL_PATH env var
- * or falls back to a default set of phishing/ham priors.
+ * Trains incrementally from admin-reviewed reports. Model is persisted in
+ * the database (MlModel table) so it survives serverless function restarts.
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { prisma } from './prisma'
+
+const MODEL_NAME = 'phishing-naive-bayes'
 
 export interface ModelData {
   phishWordCounts: Record<string, number>
@@ -53,42 +51,18 @@ function tokenize(text: string): string[] {
 }
 
 export class PhishingClassifier {
-  private model: ModelData
+  public model: ModelData
 
   constructor(model?: ModelData) {
-    this.model = model ?? { ...DEFAULT_MODEL }
+    this.model = model ?? structuredClone(DEFAULT_MODEL)
   }
 
-  /** Load a persisted model from disk. */
-  static load(path?: string): PhishingClassifier {
-    const p = path ?? process.env.PHISH_MODEL_PATH
-    if (p && existsSync(p)) {
-      try {
-        const data = JSON.parse(readFileSync(p, 'utf-8')) as ModelData
-        return new PhishingClassifier(data)
-      } catch {
-        // Fall through to default
-      }
-    }
-    return new PhishingClassifier()
-  }
-
-  /** Save the model to disk. */
-  save(path?: string): void {
-    const p = path ?? process.env.PHISH_MODEL_PATH
-    if (p) writeFileSync(p, JSON.stringify(this.model), 'utf-8')
-  }
-
-  /**
-   * Score an email body.
-   * Returns a probability between 0 and 1 (higher = more likely phishing).
-   */
   score(text: string): { probability: number; confidence: number; topPhishTokens: string[]; topHamTokens: string[] } {
     const tokens = tokenize(text)
     if (tokens.length === 0) return { probability: 0.5, confidence: 0, topPhishTokens: [], topHamTokens: [] }
 
     const vocab = this.model.phishTotal + this.model.hamTotal
-    const smoothing = 1 // Laplace smoothing
+    const smoothing = 1
 
     let logPhish = Math.log(this.model.phishDocs / (this.model.phishDocs + this.model.hamDocs))
     let logHam = Math.log(this.model.hamDocs / (this.model.phishDocs + this.model.hamDocs))
@@ -103,20 +77,15 @@ export class PhishingClassifier {
       tokenScores.push({ token, phishScore: Math.log(pPhish) - Math.log(pHam) })
     }
 
-    // Convert log-probabilities to probability using log-sum-exp
     const maxLog = Math.max(logPhish, logHam)
     const expPhish = Math.exp(logPhish - maxLog)
     const expHam = Math.exp(logHam - maxLog)
     const probability = expPhish / (expPhish + expHam)
-
-    // Confidence: how far from 0.5 (uncertain)
     const confidence = Math.abs(probability - 0.5) * 2
 
-    // Top contributing tokens
     tokenScores.sort((a, b) => b.phishScore - a.phishScore)
     const seen = new Set<string>()
     const topPhishTokens: string[] = []
-    const topHamTokens: string[] = []
     for (const t of tokenScores) {
       if (seen.has(t.token)) continue
       seen.add(t.token)
@@ -124,6 +93,7 @@ export class PhishingClassifier {
     }
     tokenScores.reverse()
     const seenHam = new Set<string>()
+    const topHamTokens: string[] = []
     for (const t of tokenScores) {
       if (seenHam.has(t.token)) continue
       seenHam.add(t.token)
@@ -136,6 +106,7 @@ export class PhishingClassifier {
   /** Train on a single labeled example. */
   train(text: string, isPhishing: boolean): void {
     const tokens = tokenize(text)
+    if (tokens.length === 0) return
     const counts = isPhishing ? this.model.phishWordCounts : this.model.hamWordCounts
     for (const token of tokens) {
       counts[token] = (counts[token] ?? 0) + 1
@@ -150,10 +121,89 @@ export class PhishingClassifier {
   }
 }
 
-/** Singleton instance — lazily loaded from persisted model or defaults. */
-let _classifier: PhishingClassifier | null = null
+// ── Database persistence ─────────────────────────────────────────────────────
+let _cached: { classifier: PhishingClassifier; loadedAt: number } | null = null
+const CACHE_TTL_MS = 60_000 // refetch from DB at most once per minute
 
-export function getClassifier(): PhishingClassifier {
-  if (!_classifier) _classifier = PhishingClassifier.load()
-  return _classifier
+export async function getClassifier(): Promise<PhishingClassifier> {
+  const now = Date.now()
+  if (_cached && now - _cached.loadedAt < CACHE_TTL_MS) {
+    return _cached.classifier
+  }
+
+  try {
+    const row = await prisma.mlModel.findUnique({ where: { name: MODEL_NAME } })
+    if (row?.data) {
+      const classifier = new PhishingClassifier(row.data as unknown as ModelData)
+      _cached = { classifier, loadedAt: now }
+      return classifier
+    }
+  } catch {
+    // table may not exist yet — fall back to default
+  }
+
+  const classifier = new PhishingClassifier()
+  _cached = { classifier, loadedAt: now }
+  return classifier
+}
+
+/** Synchronous fallback for code paths that can't await — uses cache or defaults. */
+export function getClassifierSync(): PhishingClassifier {
+  if (_cached) return _cached.classifier
+  return new PhishingClassifier()
+}
+
+/** Save the classifier model back to the database. */
+export async function saveClassifier(classifier: PhishingClassifier, examplesAdded: number): Promise<void> {
+  try {
+    await prisma.mlModel.upsert({
+      where: { name: MODEL_NAME },
+      create: {
+        name: MODEL_NAME,
+        data: classifier.model as unknown as object,
+        trainedOn: examplesAdded,
+        version: 1,
+      },
+      update: {
+        data: classifier.model as unknown as object,
+        trainedOn: { increment: examplesAdded },
+        version: { increment: 1 },
+      },
+    })
+    _cached = { classifier, loadedAt: Date.now() }
+  } catch (e) {
+    console.error('[ml-scorer] failed to save model:', e)
+  }
+}
+
+/**
+ * Retrain the model from all admin-reviewed reports in the database.
+ * Phishing label: status in [deleted, escalated]
+ * Ham label: status = released
+ */
+export async function retrainFromReports(): Promise<{ trained: number; phish: number; ham: number }> {
+  const reports = await prisma.emailReport.findMany({
+    where: {
+      status: { in: ['deleted', 'escalated', 'released'] },
+      reviewedAt: { not: null },
+    },
+    select: { subject: true, bodyText: true, status: true },
+    take: 5000,
+    orderBy: { reviewedAt: 'desc' },
+  })
+
+  // Start from a fresh default model so we don't double-count old training
+  const classifier = new PhishingClassifier()
+  let phish = 0, ham = 0
+  for (const r of reports) {
+    const text = [r.subject ?? '', r.bodyText ?? ''].join(' ').trim()
+    if (text.length < 20) continue
+    const isPhishing = r.status === 'deleted' || r.status === 'escalated'
+    classifier.train(text, isPhishing)
+    if (isPhishing) phish++
+    else ham++
+  }
+
+  await saveClassifier(classifier, phish + ham)
+  return { trained: phish + ham, phish, ham }
 }

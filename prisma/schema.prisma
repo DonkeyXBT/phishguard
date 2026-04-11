@@ -129,6 +129,18 @@ model AdminAction {
   @@map("admin_actions")
 }
 
+model MlModel {
+  id          String   @id @default(cuid())
+  name        String   @unique             // e.g. "phishing-naive-bayes"
+  data        Json                          // ModelData JSON blob
+  version     Int      @default(1)
+  trainedOn   Int      @default(0) @map("trained_on")  // total examples trained
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("ml_models")
+}
+
 model AuditLog {
   id         String   @id @default(cuid())
   userId     String?  @map("user_id")

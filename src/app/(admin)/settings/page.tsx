@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import { ShieldCheck, ShieldOff } from 'lucide-react'
+import { ShieldCheck, ShieldOff, Brain, RefreshCw } from 'lucide-react'
 
 export default function SettingsPage() {
   const [mfaEnabled, setMfaEnabled] = useState(false)
@@ -14,13 +14,34 @@ export default function SettingsPage() {
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [mlStatus, setMlStatus] = useState<{ exists: boolean; version: number; trainedOn: number; updatedAt: string | null } | null>(null)
+  const [retraining, setRetraining] = useState(false)
 
   useEffect(() => {
     api.me().then(r => { if (r.ok) return r.json(); return null }).then(d => {
       if (d) setMfaEnabled(d.mfaEnabled)
       setLoading(false)
     })
+    api.get('/api/admin/ml').then(r => { if (r.ok) return r.json(); return null }).then(d => { if (d) setMlStatus(d) })
   }, [])
+
+  const retrainModel = async () => {
+    setRetraining(true)
+    setError(''); setMessage('')
+    try {
+      const res = await api.post('/api/admin/ml', {})
+      const data = await res.json()
+      if (res.ok) {
+        setMessage(`Model retrained on ${data.trained} examples (${data.phish} phishing, ${data.ham} legitimate)`)
+        const status = await api.get('/api/admin/ml').then(r => r.json())
+        setMlStatus(status)
+      } else {
+        setError(data.error || 'Retrain failed')
+      }
+    } finally {
+      setRetraining(false)
+    }
+  }
 
   const startSetup = async () => {
     setError(''); setMessage('')
@@ -147,6 +168,46 @@ export default function SettingsPage() {
             </div>
           </form>
         )}
+      </div>
+
+      {/* ── ML Model ── */}
+      <div className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-2xl p-6 shadow-[var(--shadow-sm)] mt-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Brain size={20} className="text-blue-600 dark:text-blue-400" />
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Machine Learning Model</h2>
+        </div>
+        <p className="text-sm text-[var(--text-secondary)] mb-4">
+          The Naive Bayes classifier learns from every email an admin reviews. When you mark an email as phishing
+          (delete or escalate) or release it as legitimate, the model trains automatically to improve future detection.
+        </p>
+
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg p-3">
+            <div className="text-xs text-[var(--text-tertiary)] mb-1">Model Version</div>
+            <div className="text-xl font-bold text-[var(--text-primary)]">v{mlStatus?.version ?? 1}</div>
+          </div>
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg p-3">
+            <div className="text-xs text-[var(--text-tertiary)] mb-1">Trained On</div>
+            <div className="text-xl font-bold text-[var(--text-primary)]">{mlStatus?.trainedOn ?? 0}</div>
+            <div className="text-xs text-[var(--text-tertiary)]">examples</div>
+          </div>
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg p-3">
+            <div className="text-xs text-[var(--text-tertiary)] mb-1">Last Updated</div>
+            <div className="text-sm font-medium text-[var(--text-primary)]">
+              {mlStatus?.updatedAt ? new Date(mlStatus.updatedAt).toLocaleDateString() : 'Never'}
+            </div>
+          </div>
+        </div>
+
+        <button onClick={retrainModel} disabled={retraining}
+          className="btn-press flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg px-4 py-2">
+          <RefreshCw size={14} className={retraining ? 'animate-spin' : ''} />
+          {retraining ? 'Retraining...' : 'Retrain From All Reports'}
+        </button>
+        <p className="text-xs text-[var(--text-tertiary)] mt-2">
+          Rebuilds the model from scratch using every reviewed report in the database. Use this if you want to
+          reset training after correcting many false positives.
+        </p>
       </div>
     </div>
   )

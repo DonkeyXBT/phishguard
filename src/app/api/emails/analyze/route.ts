@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { analyzeEmail } from '@/lib/analyzer'
 import { getApiKeyOrg, apiKeyFromRequest } from '@/lib/auth'
+import { getClassifier } from '@/lib/ml-scorer'
 import { ok, err } from '@/lib/response'
 
 function extractDomain(sender?: string | null): string | null {
@@ -17,6 +18,10 @@ export async function POST(req: NextRequest) {
   if (!org) return err('Invalid API key', 401)
 
   const body = await req.json()
+
+  // Warm the ML classifier cache from the database (will use cached version after first call)
+  await getClassifier()
+
   const result = analyzeEmail({
     sender:      body.sender,
     replyTo:     body.reply_to,

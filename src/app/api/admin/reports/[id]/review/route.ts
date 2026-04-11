@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/auth'
+import { getClassifier, saveClassifier } from '@/lib/ml-scorer'
 import { ok, err } from '@/lib/response'
 import { audit } from '@/lib/audit'
 
@@ -28,6 +29,23 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   ])
 
   audit(req, { userId: user.id, userEmail: user.email, action: `report.${action}`, resource: `report:${id}`, detail: notes ?? null })
+
+  // ── Incremental ML training ──────────────────────────────────────────────
+  // Train the classifier on this email so future analyses learn from the admin's decision.
+  // false_positive is excluded — it's a label correction, not a clear ham example.
+  if (action === 'deleted' || action === 'escalated' || action === 'released') {
+    try {
+      const text = [report.subject ?? '', report.bodyText ?? ''].join(' ').trim()
+      if (text.length >= 20) {
+        const classifier = await getClassifier()
+        const isPhishing = action === 'deleted' || action === 'escalated'
+        classifier.train(text, isPhishing)
+        await saveClassifier(classifier, 1)
+      }
+    } catch (e) {
+      console.error('[review] ML training failed:', e)
+    }
+  }
 
   return ok({ message: `Report marked as ${action}`, report_id: id })
 }
