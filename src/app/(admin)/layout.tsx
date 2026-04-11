@@ -6,7 +6,7 @@ import { useEffect } from 'react'
 import { useTheme } from '@/components/ThemeProvider'
 import {
   LayoutDashboard, Inbox, Building2, Globe, FileText,
-  BarChart3, Settings, LogOut, Shield, Sun, Moon,
+  BarChart3, Settings, LogOut, Shield, Sun, Moon, Brain,
 } from 'lucide-react'
 
 const navGroups = [
@@ -29,6 +29,7 @@ const navGroups = [
     items: [
       { href: '/audit', label: 'Audit Log', icon: FileText },
       { href: '/analytics', label: 'Analytics', icon: BarChart3 },
+      { href: '/ml-insights', label: 'ML Insights', icon: Brain },
       { href: '/settings', label: 'Settings', icon: Settings },
     ],
   },
