@@ -14,7 +14,18 @@ export default function SettingsPage() {
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
-  const [mlStatus, setMlStatus] = useState<{ exists: boolean; version: number; trainedOn: number; updatedAt: string | null } | null>(null)
+  const [mlStatus, setMlStatus] = useState<{
+    exists: boolean
+    version: number
+    trainedOn: number
+    phishDocs: number
+    hamDocs: number
+    vocabularySize: number
+    updatedAt: string | null
+    topPhishTokens: Array<{ token: string; phish: number; ham: number }>
+    topHamTokens: Array<{ token: string; phish: number; ham: number }>
+    recentTraining: Array<{ id: string; subject: string | null; sender: string | null; status: string; riskScore: number; riskLevel: string; reviewedAt: string }>
+  } | null>(null)
   const [retraining, setRetraining] = useState(false)
 
   useEffect(() => {
@@ -181,33 +192,110 @@ export default function SettingsPage() {
           (delete or escalate) or release it as legitimate, the model trains automatically to improve future detection.
         </p>
 
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg p-3">
-            <div className="text-xs text-[var(--text-tertiary)] mb-1">Model Version</div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] border-l-[3px] border-l-blue-500 rounded-lg p-3">
+            <div className="text-xs text-[var(--text-tertiary)] mb-1">Version</div>
             <div className="text-xl font-bold text-[var(--text-primary)]">v{mlStatus?.version ?? 1}</div>
           </div>
-          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg p-3">
-            <div className="text-xs text-[var(--text-tertiary)] mb-1">Trained On</div>
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] border-l-[3px] border-l-violet-500 rounded-lg p-3">
+            <div className="text-xs text-[var(--text-tertiary)] mb-1">Total Examples</div>
             <div className="text-xl font-bold text-[var(--text-primary)]">{mlStatus?.trainedOn ?? 0}</div>
-            <div className="text-xs text-[var(--text-tertiary)]">examples</div>
           </div>
-          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg p-3">
-            <div className="text-xs text-[var(--text-tertiary)] mb-1">Last Updated</div>
-            <div className="text-sm font-medium text-[var(--text-primary)]">
-              {mlStatus?.updatedAt ? new Date(mlStatus.updatedAt).toLocaleDateString() : 'Never'}
-            </div>
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] border-l-[3px] border-l-red-500 rounded-lg p-3">
+            <div className="text-xs text-[var(--text-tertiary)] mb-1">Phishing Docs</div>
+            <div className="text-xl font-bold text-red-600 dark:text-red-400">{mlStatus?.phishDocs ?? 0}</div>
+          </div>
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] border-l-[3px] border-l-emerald-500 rounded-lg p-3">
+            <div className="text-xs text-[var(--text-tertiary)] mb-1">Legitimate Docs</div>
+            <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{mlStatus?.hamDocs ?? 0}</div>
+          </div>
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] border-l-[3px] border-l-amber-500 rounded-lg p-3">
+            <div className="text-xs text-[var(--text-tertiary)] mb-1">Vocabulary</div>
+            <div className="text-xl font-bold text-[var(--text-primary)]">{mlStatus?.vocabularySize ?? 0}</div>
+            <div className="text-xs text-[var(--text-tertiary)]">words</div>
           </div>
         </div>
 
-        <button onClick={retrainModel} disabled={retraining}
-          className="btn-press flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg px-4 py-2">
-          <RefreshCw size={14} className={retraining ? 'animate-spin' : ''} />
-          {retraining ? 'Retraining...' : 'Retrain From All Reports'}
-        </button>
-        <p className="text-xs text-[var(--text-tertiary)] mt-2">
-          Rebuilds the model from scratch using every reviewed report in the database. Use this if you want to
-          reset training after correcting many false positives.
-        </p>
+        {/* Top tokens */}
+        {mlStatus && (mlStatus.topPhishTokens.length > 0 || mlStatus.topHamTokens.length > 0) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+            <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Top Phishing Words Learned</h3>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {mlStatus.topPhishTokens.map(t => (
+                  <span key={t.token} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 font-medium">
+                    {t.token}
+                    <span className="text-[10px] opacity-60">{t.phish}</span>
+                  </span>
+                ))}
+                {mlStatus.topPhishTokens.length === 0 && <span className="text-xs text-[var(--text-tertiary)]">No data yet</span>}
+              </div>
+            </div>
+            <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Top Legitimate Words Learned</h3>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {mlStatus.topHamTokens.map(t => (
+                  <span key={t.token} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 font-medium">
+                    {t.token}
+                    <span className="text-[10px] opacity-60">{t.ham}</span>
+                  </span>
+                ))}
+                {mlStatus.topHamTokens.length === 0 && <span className="text-xs text-[var(--text-tertiary)]">No data yet</span>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Recent training feed */}
+        {mlStatus && mlStatus.recentTraining.length > 0 && (
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg p-4 mb-5">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3 flex items-center gap-2">
+              <Brain size={14} className="text-blue-600 dark:text-blue-400" />
+              Recent Training Feed
+            </h3>
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {mlStatus.recentTraining.map(t => {
+                const isPhish = t.status === 'deleted' || t.status === 'escalated'
+                return (
+                  <div key={t.id} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border-secondary)]">
+                    <div className={`w-1.5 h-8 rounded-full flex-shrink-0 ${isPhish ? 'bg-red-500' : 'bg-emerald-500'}`}></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium text-[var(--text-primary)] truncate">{t.subject ?? '(no subject)'}</div>
+                      <div className="text-[11px] text-[var(--text-tertiary)] truncate">{t.sender ?? 'unknown'}</div>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border whitespace-nowrap ${
+                      isPhish
+                        ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
+                        : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                    }`}>
+                      {isPhish ? 'PHISH' : 'HAM'}
+                    </span>
+                    <span className="text-[10px] text-[var(--text-tertiary)] whitespace-nowrap">
+                      {new Date(t.reviewedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          <button onClick={retrainModel} disabled={retraining}
+            className="btn-press flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg px-4 py-2">
+            <RefreshCw size={14} className={retraining ? 'animate-spin' : ''} />
+            {retraining ? 'Retraining...' : 'Retrain From All Reports'}
+          </button>
+          <span className="text-xs text-[var(--text-tertiary)]">
+            Last updated {mlStatus?.updatedAt ? new Date(mlStatus.updatedAt).toLocaleString() : 'never'}
+          </span>
+        </div>
       </div>
     </div>
   )
