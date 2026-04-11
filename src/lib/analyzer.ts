@@ -48,6 +48,45 @@ const SUSPICIOUS_TLDS = ['.xyz','.top','.club','.online','.site','.info','.biz',
 const URL_SHORTENERS = ['bit.ly','tinyurl.com','t.co','goo.gl','ow.ly','buff.ly','short.link','rb.gy','cutt.ly']
 const EXECUTIVE_TITLES = ['ceo','cfo','coo','president','director','vp ','vice president']
 
+const GENERIC_GREETINGS = [
+  'dear customer','dear user','dear valued customer','dear member','dear client',
+  'dear sir/madam','dear sir or madam','dear account holder','dear subscriber',
+  'attention customer','hello customer','hello user','greetings customer',
+  'dear email user','dear mailbox user','dear paypal customer','dear account user',
+]
+
+const AUTHORITY_KEYWORDS = [
+  'irs','internal revenue','tax authority','hmrc','belastingdienst',
+  'fbi','police','court','sheriff','interpol','homeland security',
+  'social security administration','department of justice','government',
+  'embassy','immigration','customs','prosecutor','attorney general',
+]
+
+const PASSWORD_HINT_PHRASES = [
+  'password is','password:','use password','attached password','zip password',
+  'archive password','file password','document password','open with password',
+]
+
+// Cyrillic and Greek character ranges that look like Latin letters
+function hasHomoglyph(str: string): boolean {
+  // Cyrillic letters that look like Latin: а(а) е(е) о(о) р(р) с(с) у(у) х(х) etc.
+  // Greek: α(α) ο(ο) ρ(ρ) etc.
+  return /[\u0400-\u04FF\u0370-\u03FF]/.test(str)
+}
+
+function isRandomLooking(filename: string): boolean {
+  // Strip extension
+  const base = filename.replace(/\.[a-z0-9]+$/i, '')
+  if (base.length < 8) return false
+  // Random patterns: long hex, long digits, mixed case nonsense
+  if (/^[a-f0-9]{16,}$/i.test(base)) return true
+  if (/^\d{10,}$/.test(base)) return true
+  // High ratio of digits in name
+  const digits = (base.match(/\d/g) ?? []).length
+  if (digits >= 8 && digits / base.length > 0.5) return true
+  return false
+}
+
 function levenshtein(s1: string, s2: string): number {
   if (s1.length < s2.length) return levenshtein(s2, s1)
   if (s2.length === 0) return s1.length
@@ -147,6 +186,22 @@ const SIGNAL_DEFS: Record<string, { label: string; description: string; score: n
   MISSING_AUTH:               { label: 'No Email Authentication', description: 'Email lacks SPF/DKIM/DMARC authentication data', score: 15, severity: 'warning' },
   ML_HIGH_PHISH:              { label: 'ML Phishing Score', description: 'Machine learning model rates this email as likely phishing', score: 20, severity: 'warning' },
   ENCRYPTED_BODY:             { label: 'Encrypted Email', description: 'Email body is encrypted and cannot be fully inspected', score: 10, severity: 'info' },
+  HOMOGLYPH_DOMAIN:           { label: 'Homoglyph Attack', description: 'Sender domain contains visually similar Unicode characters (Cyrillic/Greek)', score: 35, severity: 'critical' },
+  EXCESSIVE_SUBDOMAINS:       { label: 'Excessive Subdomains', description: 'URL uses many subdomains to hide its true destination', score: 20, severity: 'warning' },
+  ENCODED_URL:                { label: 'Obfuscated URL', description: 'URL is heavily percent-encoded or obfuscated to hide its destination', score: 25, severity: 'danger' },
+  GENERIC_GREETING:           { label: 'Generic Greeting', description: 'Email uses a generic greeting like "Dear customer" instead of your name', score: 10, severity: 'info' },
+  EMBEDDED_FORM:              { label: 'Embedded Form', description: 'Email contains an HTML form requesting input directly inside the message', score: 35, severity: 'critical' },
+  HIDDEN_LINK:                { label: 'Hidden Link', description: 'Link has empty or whitespace display text — clickable area you cannot see', score: 15, severity: 'warning' },
+  TRACKING_PIXEL:             { label: 'Tracking Pixel', description: 'Email contains a 1x1 image used to track when you opened it', score: 5, severity: 'info' },
+  SCRIPT_IN_BODY:             { label: 'Script in Body', description: 'Email body contains script tags (active code)', score: 30, severity: 'danger' },
+  RANDOM_FILENAME:            { label: 'Random Attachment Name', description: 'Attachment uses a random-looking filename, common in malware delivery', score: 15, severity: 'warning' },
+  OFF_HOURS_SEND:             { label: 'Off-Hours Send', description: 'Email sent at an unusual time (late night or weekend) for business correspondence', score: 5, severity: 'info' },
+  RISK_COMBINATION:           { label: 'High-Risk Combination', description: 'Multiple critical phishing patterns appear together', score: 25, severity: 'critical' },
+  AUTHORITY_IMPERSONATION:    { label: 'Authority Impersonation', description: 'Email claims to be from an authority figure (IRS, police, government)', score: 25, severity: 'danger' },
+  DATA_URL:                   { label: 'Data URL Link', description: 'Link uses data: URL scheme which can hide malicious content', score: 30, severity: 'danger' },
+  UNUSUAL_PORT:               { label: 'Unusual Port', description: 'URL uses a non-standard port often used to evade filters', score: 20, severity: 'warning' },
+  PASSWORD_PROTECTED_ATTACHMENT: { label: 'Password-Protected Archive', description: 'Email mentions a password for an attachment — common malware delivery technique', score: 30, severity: 'danger' },
+  HTTP_LINK_IN_HTTPS_CONTEXT: { label: 'Insecure Link', description: 'Link uses plain HTTP instead of HTTPS', score: 10, severity: 'warning' },
 }
 
 export function analyzeEmail(params: {
@@ -184,6 +239,11 @@ export function analyzeEmail(params: {
   }
 
   if (params.sender && senderDomain) {
+    // Homoglyph detection — Cyrillic/Greek chars in sender domain
+    if (hasHomoglyph(senderDomain)) {
+      addSignal('HOMOGLYPH_DOMAIN', `Domain '${senderDomain}' contains non-Latin characters that look like Latin letters`)
+    }
+
     const displayName = params.sender.includes('<') ? params.sender.split('<')[0].replace(/"/g, '').toLowerCase().trim() : ''
     for (const brand of KNOWN_BRANDS) {
       if (displayName.includes(brand) && !senderDomain.includes(brand)) {
@@ -260,12 +320,92 @@ export function analyzeEmail(params: {
     }
   }
 
+  // --- Generic greeting detection ---
+  const bodyStart = bodyLower.substring(0, 200)
+  for (const greeting of GENERIC_GREETINGS) {
+    if (bodyStart.includes(greeting)) {
+      addSignal('GENERIC_GREETING', `Body opens with '${greeting}'`)
+      break
+    }
+  }
+
+  // --- Authority impersonation ---
+  for (const auth of AUTHORITY_KEYWORDS) {
+    if ((bodyLower.includes(auth) || subjectLower.includes(auth)) && senderDomain && !senderDomain.includes('.gov') && !senderDomain.endsWith('.gov.uk') && !senderDomain.endsWith('.gov.nl')) {
+      addSignal('AUTHORITY_IMPERSONATION', `Mentions '${auth}' but not sent from a .gov domain`)
+      break
+    }
+  }
+
+  // --- Password-protected attachment hint ---
+  for (const phrase of PASSWORD_HINT_PHRASES) {
+    if (bodyLower.includes(phrase)) {
+      addSignal('PASSWORD_PROTECTED_ATTACHMENT', `Body mentions '${phrase}'`)
+      break
+    }
+  }
+
+  // --- Off-hours send detection ---
+  if (typeof params.rawHeaders === 'string') {
+    const dateMatch = params.rawHeaders.match(/^Date:\s*(.+)$/im)
+    if (dateMatch) {
+      const sendDate = new Date(dateMatch[1])
+      if (!isNaN(sendDate.getTime())) {
+        const hour = sendDate.getUTCHours()
+        const day = sendDate.getUTCDay()
+        // Late night (00:00-05:00 UTC) or weekend
+        if (hour >= 0 && hour < 5) {
+          addSignal('OFF_HOURS_SEND', `Sent at ${hour}:00 UTC (late night)`)
+        } else if (day === 0 || day === 6) {
+          addSignal('OFF_HOURS_SEND', `Sent on ${day === 0 ? 'Sunday' : 'Saturday'}`)
+        }
+      }
+    }
+  }
+
   // --- URL checks ---
   const analyzedLinks: AnalyzedLink[] = []
+  const seenSignals = new Set<string>()
   if (params.bodyHtml) {
     for (const { url, display } of extractUrlsFromHtml(params.bodyHtml)) {
       const domain = extractDomain(url)
       const entry: AnalyzedLink = { displayText: display, url, domain, isSuspicious: false, riskReason: null }
+
+      // Data URL — can hide arbitrary content
+      if (url.startsWith('data:') && !seenSignals.has('DATA_URL')) {
+        addSignal('DATA_URL', 'Link uses data: URL scheme')
+        seenSignals.add('DATA_URL')
+        entry.isSuspicious = true; entry.riskReason = 'data: URL'
+      }
+
+      // Hidden link — empty/whitespace display text
+      if (url.startsWith('http') && (!display || display.trim().length === 0) && !seenSignals.has('HIDDEN_LINK')) {
+        addSignal('HIDDEN_LINK', `Empty display text for ${url.substring(0, 60)}`)
+        seenSignals.add('HIDDEN_LINK')
+        entry.isSuspicious = true; entry.riskReason = 'hidden link'
+      }
+
+      // Heavy URL encoding (obfuscation)
+      const percentCount = (url.match(/%[0-9a-f]{2}/gi) ?? []).length
+      if (percentCount >= 5 && !seenSignals.has('ENCODED_URL')) {
+        addSignal('ENCODED_URL', `URL contains ${percentCount} encoded characters`)
+        seenSignals.add('ENCODED_URL')
+        entry.isSuspicious = true; entry.riskReason = 'obfuscated URL'
+      }
+
+      // Unusual port and HTTP scheme
+      try {
+        const u = new URL(url)
+        if (u.port && !['80', '443', ''].includes(u.port) && !seenSignals.has('UNUSUAL_PORT')) {
+          addSignal('UNUSUAL_PORT', `Port ${u.port} on ${u.hostname}`)
+          seenSignals.add('UNUSUAL_PORT')
+          entry.isSuspicious = true; entry.riskReason = `unusual port ${u.port}`
+        }
+        if (u.protocol === 'http:' && !isIpAddress(u.hostname) && !seenSignals.has('HTTP_LINK_IN_HTTPS_CONTEXT')) {
+          addSignal('HTTP_LINK_IN_HTTPS_CONTEXT', `Insecure HTTP link to ${u.hostname}`)
+          seenSignals.add('HTTP_LINK_IN_HTTPS_CONTEXT')
+        }
+      } catch {}
 
       if (display.startsWith('http') && domain) {
         const displayDomain = extractDomain(display)
@@ -275,6 +415,20 @@ export function analyzeEmail(params: {
         }
       }
       if (domain) {
+        // Homoglyph in URL domain
+        if (hasHomoglyph(domain) && !seenSignals.has('HOMOGLYPH_URL')) {
+          addSignal('HOMOGLYPH_DOMAIN', `URL domain '${domain}' contains non-Latin characters`)
+          seenSignals.add('HOMOGLYPH_URL')
+          entry.isSuspicious = true; entry.riskReason = 'homoglyph domain'
+        }
+        // Excessive subdomains
+        const dotCount = (domain.match(/\./g) ?? []).length
+        if (dotCount >= 4 && !seenSignals.has('EXCESSIVE_SUBDOMAINS')) {
+          addSignal('EXCESSIVE_SUBDOMAINS', `${dotCount + 1} dot-segments in '${domain}'`)
+          seenSignals.add('EXCESSIVE_SUBDOMAINS')
+          entry.isSuspicious = true; entry.riskReason = 'excessive subdomains'
+        }
+
         if (URL_SHORTENERS.some(s => domain.includes(s))) {
           addSignal('SHORTENED_URL', `Shortened via ${domain}`)
           entry.isSuspicious = true; entry.riskReason = 'URL shortener'
@@ -282,7 +436,6 @@ export function analyzeEmail(params: {
           addSignal('IP_ADDRESS_URL', `Raw IP: ${domain}`)
           entry.isSuspicious = true; entry.riskReason = 'IP address URL'
         } else {
-          // Extract the actual TLD (last dot-segment) to avoid false matches
           const domainParts = domain.split('.')
           const actualTld = domainParts.length >= 2 ? '.' + domainParts[domainParts.length - 1] : ''
           if (SUSPICIOUS_TLDS.includes(actualTld)) {
@@ -292,6 +445,17 @@ export function analyzeEmail(params: {
         }
       }
       analyzedLinks.push(entry)
+    }
+
+    // --- HTML body structure checks ---
+    if (/<form[\s>]/i.test(params.bodyHtml)) {
+      addSignal('EMBEDDED_FORM', 'HTML contains <form> element')
+    }
+    if (/<script[\s>]/i.test(params.bodyHtml)) {
+      addSignal('SCRIPT_IN_BODY', 'HTML contains <script> element')
+    }
+    if (/<img[^>]+(?:width\s*=\s*["']?1["']?[^>]+height\s*=\s*["']?1["']?|height\s*=\s*["']?1["']?[^>]+width\s*=\s*["']?1["']?)/i.test(params.bodyHtml)) {
+      addSignal('TRACKING_PIXEL', 'Found 1x1 pixel image')
     }
   }
 
@@ -309,6 +473,11 @@ export function analyzeEmail(params: {
     } else if (ARCHIVE_EXTENSIONS.some(e => fname.endsWith(e))) {
       addSignal('ARCHIVE_WITH_EXECUTABLE', `Archive '${fname}' may contain executables`)
       entry.isSuspicious = true; entry.riskReason = 'archive file'
+    }
+    // Random-looking filename (e.g., invoice_983475982.zip)
+    if (fname && isRandomLooking(fname)) {
+      addSignal('RANDOM_FILENAME', `'${fname}' has a random-looking name`)
+      entry.isSuspicious = true; entry.riskReason = entry.riskReason ?? 'random filename'
     }
     analyzedAttachments.push(entry)
   }
@@ -339,6 +508,26 @@ export function analyzeEmail(params: {
     } catch {
       // ML scoring is best-effort
     }
+  }
+
+  // --- Risk amplification combinations ---
+  // When multiple high-risk patterns appear together, add a combination signal.
+  const codes = new Set(signals.map(s => s.code))
+  const hasUrgency = codes.has('URGENCY_LANGUAGE') || codes.has('THREAT_LANGUAGE')
+  const hasCredOrFinancial = codes.has('CREDENTIAL_REQUEST') || codes.has('FINANCIAL_REQUEST')
+  const hasDomainIssue = codes.has('LOOKALIKE_DOMAIN') || codes.has('DISPLAY_NAME_SPOOF') || codes.has('IMPERSONATION_BRAND') || codes.has('HOMOGLYPH_DOMAIN') || codes.has('REPLY_TO_MISMATCH')
+  const hasAuthFailure = codes.has('SPF_FAIL') || codes.has('DKIM_FAIL') || codes.has('DMARC_FAIL')
+  const hasMacroAttachment = codes.has('OFFICE_WITH_MACROS') || codes.has('ARCHIVE_WITH_EXECUTABLE') || codes.has('DANGEROUS_ATTACHMENT_TYPE')
+
+  const combos: string[] = []
+  if (hasUrgency && hasCredOrFinancial && hasDomainIssue) combos.push('urgency + credential request + domain mismatch')
+  if (codes.has('IMPERSONATION_BRAND') && hasMacroAttachment) combos.push('brand impersonation + dangerous attachment')
+  if (codes.has('IMPERSONATION_EXECUTIVE') && codes.has('FINANCIAL_REQUEST')) combos.push('executive impersonation + financial request')
+  if (hasAuthFailure && hasDomainIssue) combos.push('auth failure + spoofed domain')
+  if (codes.has('EMBEDDED_FORM') && hasCredOrFinancial) combos.push('embedded form + credential request')
+
+  if (combos.length > 0) {
+    addSignal('RISK_COMBINATION', combos.join('; '))
   }
 
   // --- Finalize ---
