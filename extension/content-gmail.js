@@ -169,13 +169,48 @@ function getUserEmail() {
 }
 
 function parseGmailEmail(container) {
-  const subjectEl = document.querySelector('h2[data-legacy-thread-id], [data-thread-id] h2, .hP');
-  const subject   = subjectEl?.textContent?.trim() || document.title.replace(' - Gmail', '').trim();
-  const senderEl  = container.querySelector('[email]') || container.querySelector('.gD');
-  const sender    = senderEl?.getAttribute('email') || senderEl?.textContent?.trim() || '';
-  const replyTo   = container.querySelector('[data-hovercard-id]')?.getAttribute('data-hovercard-id') || '';
-  const bodyEl    = container.querySelector('.a3s.aiL') || container.querySelector('[data-message-id] .ii.gt div');
-  return { subject, sender, reply_to: replyTo, body_text: bodyEl?.innerText?.trim() || '', body_html: bodyEl?.innerHTML || '' };
+  // Subject — try multiple stable selectors
+  const subjectSelectors = [
+    'h2[data-legacy-thread-id]',
+    '[data-thread-id] h2',
+    '.hP',
+    'h2.hP',
+    '[data-test-id="subject"]',
+    'h2[role="heading"]',
+  ];
+  let subject = '';
+  for (const sel of subjectSelectors) {
+    const el = document.querySelector(sel);
+    if (el?.textContent?.trim()) { subject = el.textContent.trim(); break; }
+  }
+  if (!subject) subject = document.title.replace(' - Gmail', '').replace(/^\(\d+\)\s*/, '').trim();
+
+  // Sender — try multiple selectors, prefer email attribute
+  const senderEl = container.querySelector('[email]')
+    || container.querySelector('.gD')
+    || container.querySelector('span.go')
+    || container.querySelector('[data-hovercard-id]');
+  const sender = senderEl?.getAttribute('email')
+    || senderEl?.getAttribute('data-hovercard-id')
+    || senderEl?.textContent?.trim()
+    || '';
+
+  const replyTo = container.querySelector('[data-hovercard-id]')?.getAttribute('data-hovercard-id') || '';
+
+  // Body — multiple selectors, fall back to anything that looks like an email body
+  const bodyEl = container.querySelector('.a3s.aiL')
+    || container.querySelector('.a3s')
+    || container.querySelector('[data-message-id] .ii.gt div')
+    || container.querySelector('.ii.gt div')
+    || container.querySelector('.ii.gt');
+
+  return {
+    subject,
+    sender,
+    reply_to: replyTo,
+    body_text: bodyEl?.innerText?.trim() || '',
+    body_html: bodyEl?.innerHTML || '',
+  };
 }
 
 // ── Email auth badge builder ─────────────────────────────────────────────────
@@ -299,7 +334,11 @@ function createBanner(result, emailData, reported = false) {
 // ── Analysis ──────────────────────────────────────────────────────────────────
 function analyzeEmailContainer(container) {
   const emailData = parseGmailEmail(container);
-  if (!emailData.sender && !emailData.body_text) return;
+  if (!emailData.sender && !emailData.body_text) {
+    console.log('[PhishGuard] Skipping — no sender or body');
+    return;
+  }
+  console.log('[PhishGuard] Analyzing:', emailData.subject?.slice(0, 50), 'from', emailData.sender);
 
   // Remove any existing PhishGuard elements before re-scanning
   container.querySelectorAll('.phishguard-wrap, .phishguard-loading, .phishguard-cover').forEach(el => el.remove());
@@ -347,27 +386,29 @@ function analyzeEmailContainer(container) {
 function scanForEmails() {
   currentUserEmail = getUserEmail();
 
-  // Find all message containers in the thread
-  const selectors = [
-    '.adn.ads',
-    '.gs',
-    '[data-message-id]',
-    '.nH.hx',
-  ];
-  const allContainers = document.querySelectorAll(selectors.join(', '));
-  const containers = Array.from(allContainers).filter(el =>
-    el.querySelector('.a3s') || el.querySelector('.a3s.aiL') || el.querySelector('[data-message-id] .ii.gt div') || el.querySelector('.ii.gt')
-  );
-  const target = containers[containers.length - 1];
+  // Find email body elements directly — `.a3s` has been Gmail's email body class for years
+  const bodyElements = document.querySelectorAll('.a3s, .ii.gt');
+  if (bodyElements.length === 0) return;
+
+  // Pick the LAST visible body (most recent message in the thread)
+  let target = null;
+  for (let i = bodyElements.length - 1; i >= 0; i--) {
+    const body = bodyElements[i];
+    if (body.offsetHeight > 20 && body.innerText?.trim().length > 10) {
+      // Walk up to find a usable container — try common Gmail wrappers
+      let parent = body.closest('.adn.ads, .gs, [data-message-id], .nH.hx');
+      if (!parent) parent = body.parentElement;
+      if (parent) { target = parent; break; }
+    }
+  }
   if (!target) return;
 
-  // Already analyzed this exact element AND a banner is still visible? skip
+  // Already analyzed and banner still showing? skip
   if (target.hasAttribute(ANALYZED_ATTR) && target.querySelector('.phishguard-wrap, .phishguard-loading, .phishguard-cover')) {
     return;
   }
 
-  // Mark all containers as analyzed
-  containers.forEach(el => el.setAttribute(ANALYZED_ATTR, '1'));
+  target.setAttribute(ANALYZED_ATTR, '1');
   analyzeEmailContainer(target);
 }
 
