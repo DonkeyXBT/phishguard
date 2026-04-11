@@ -69,6 +69,7 @@ function AddForm({ listType, onAdded }: { listType: 'whitelist' | 'blacklist'; o
 const SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
   openphish: { label: 'OpenPhish', cls: 'bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800' },
   phishtank: { label: 'PhishTank', cls: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' },
+  auto:      { label: 'Auto',      cls: 'bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800' },
   manual:    { label: 'Manual',    cls: 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] border-[var(--border-primary)]' },
 }
 

@@ -36,8 +36,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   invalidateCache('analytics:')
 
   // ── Incremental ML training ──────────────────────────────────────────────
-  // Train the classifier on this email so future analyses learn from the admin's decision.
-  // false_positive is excluded — it's a label correction, not a clear ham example.
   if (action === 'deleted' || action === 'escalated' || action === 'released') {
     try {
       const text = [report.subject ?? '', report.bodyText ?? ''].join(' ').trim()
@@ -52,5 +50,70 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
   }
 
-  return ok({ message: `Report marked as ${action}`, report_id: id })
+  // ── Auto-domain-list ─────────────────────────────────────────────────────
+  // When an admin's verdict for a sender domain becomes consistent across
+  // multiple reports, auto-promote it to the appropriate domain list.
+  // Thresholds: 3 phishing verdicts → blacklist, 5 released verdicts → whitelist.
+  // Skips free email providers and domains already on either list.
+  const FREE_PROVIDERS = ['gmail.com','yahoo.com','hotmail.com','outlook.com','live.com','icloud.com','aol.com','protonmail.com','mail.com']
+  const senderDomain = report.senderDomain?.toLowerCase().trim() || null
+  let autoListed: { type: string; domain: string } | null = null
+
+  if (senderDomain && !FREE_PROVIDERS.includes(senderDomain)) {
+    try {
+      const existing = await prisma.domainList.findFirst({ where: { domain: senderDomain } })
+      if (!existing) {
+        if (action === 'deleted' || action === 'escalated') {
+          const phishCount = await prisma.emailReport.count({
+            where: {
+              senderDomain,
+              status: { in: ['deleted', 'escalated'] },
+            },
+          })
+          if (phishCount >= 3) {
+            await prisma.domainList.create({
+              data: {
+                domain: senderDomain,
+                listType: 'blacklist',
+                source: 'auto',
+                reason: `Auto-blacklisted after ${phishCount} phishing reports`,
+              },
+            })
+            autoListed = { type: 'blacklist', domain: senderDomain }
+            audit(req, { userId: user.id, userEmail: user.email, action: 'domain.auto_blacklist', resource: `domain:${senderDomain}`, detail: `${phishCount} phishing reports` })
+          }
+        } else if (action === 'released') {
+          const releasedCount = await prisma.emailReport.count({
+            where: {
+              senderDomain,
+              status: 'released',
+            },
+          })
+          // Also require zero phishing verdicts to avoid whitelisting a domain with mixed verdicts
+          const phishCount = await prisma.emailReport.count({
+            where: {
+              senderDomain,
+              status: { in: ['deleted', 'escalated'] },
+            },
+          })
+          if (releasedCount >= 5 && phishCount === 0) {
+            await prisma.domainList.create({
+              data: {
+                domain: senderDomain,
+                listType: 'whitelist',
+                source: 'auto',
+                reason: `Auto-whitelisted after ${releasedCount} legitimate emails`,
+              },
+            })
+            autoListed = { type: 'whitelist', domain: senderDomain }
+            audit(req, { userId: user.id, userEmail: user.email, action: 'domain.auto_whitelist', resource: `domain:${senderDomain}`, detail: `${releasedCount} released reports` })
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[review] auto-domain-list failed:', e)
+    }
+  }
+
+  return ok({ message: `Report marked as ${action}`, report_id: id, auto_listed: autoListed })
 }
