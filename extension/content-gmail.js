@@ -30,7 +30,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (!currentEmailData) { sendResponse({ ok: false, error: 'No email data' }); return true; }
     safeSendMessage(
       { type: 'REPORT_EMAIL', data: buildReportPayload(currentEmailData) },
-      r => sendResponse(r?.result ? { ok: true } : { ok: false, error: r?.error || 'Failed' })
+      r => {
+        if (r?.result) {
+          markReported(currentEmailData);
+          sendResponse({ ok: true });
+        } else {
+          sendResponse({ ok: false, error: r?.error || 'Failed' });
+        }
+      }
     );
     return true;
   }
@@ -56,6 +63,34 @@ function buildReportPayload(d) {
 function matchesDeletion(emailData, d) {
   const n = s => (s || '').toLowerCase().trim();
   return n(emailData.subject) === n(d.subject) && n(emailData.sender) === n(d.sender);
+}
+
+// ── Reported emails memory ────────────────────────────────────────────────────
+function emailKey(d) {
+  const n = s => (s || '').toLowerCase().trim();
+  return `${n(d.subject)}|${n(d.sender)}`;
+}
+
+function isReported(emailData, cb) {
+  chrome.storage.local.get(['reportedEmails'], ({ reportedEmails = [] }) => {
+    const key = emailKey(emailData);
+    cb(reportedEmails.some(r => r.key === key));
+  });
+}
+
+function markReported(emailData) {
+  chrome.storage.local.get(['reportedEmails'], ({ reportedEmails = [] }) => {
+    const key = emailKey(emailData);
+    if (reportedEmails.some(r => r.key === key)) return;
+    reportedEmails.unshift({
+      key,
+      subject: emailData.subject,
+      sender: emailData.sender,
+      reportedAt: Date.now(),
+    });
+    // Keep last 200 entries
+    chrome.storage.local.set({ reportedEmails: reportedEmails.slice(0, 200) });
+  });
 }
 
 // ── Deletion handling — full-screen phishing cover ───────────────────────────
@@ -175,7 +210,7 @@ const DESCS  = {
   critical: 'This email shows strong signs of phishing. Do not interact with it.',
 };
 
-function createBanner(result, emailData) {
+function createBanner(result, emailData, reported = false) {
   const level = result.risk_level || 'low';
   const score = result.risk_score ?? 0;
   const isSafe = level === 'low';
@@ -200,24 +235,30 @@ function createBanner(result, emailData) {
     critical: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
   };
 
+  const reportButton = reported
+    ? `<button class="phishguard-btn phishguard-btn-report" disabled style="background:#16a34a">✓ Already Reported</button>`
+    : `<button class="phishguard-btn phishguard-btn-report">Report as Phishing</button>`;
+
   const detailsHtml = !isSafe ? `
     <div class="phishguard-details pg-${level}">
       <div class="phishguard-desc">${DESCS[level] || ''}</div>
       ${authHtml}
       ${signalHtml ? `<div class="phishguard-signals">${signalHtml}</div>` : ''}
       <div class="phishguard-actions">
-        <button class="phishguard-btn phishguard-btn-report">Report as Phishing</button>
+        ${reportButton}
         <button class="phishguard-btn phishguard-btn-dismiss">Dismiss</button>
       </div>
     </div>` : '';
 
   const safeAuthHtml = isSafe && authHtml ? `<div style="margin-top:4px">${authHtml}</div>` : '';
+  const reportedBadge = reported ? `<span class="phishguard-bar-reported" title="You reported this email">✓</span>` : '';
 
   wrap.innerHTML = `
     <div class="phishguard-bar pg-${level}">
       <span class="phishguard-bar-icon">${levelIcons[level] || ''}</span>
       <span class="phishguard-bar-label">PhishGuard: ${LABELS[level] || level}</span>
       <span class="phishguard-bar-score">· ${score}/100</span>
+      ${reportedBadge}
       ${toggleHtml}
       ${closeHtml}
     </div>
@@ -241,6 +282,7 @@ function createBanner(result, emailData) {
       { type: 'REPORT_EMAIL', data: buildReportPayload(emailData) },
       (response) => {
         if (response?.result) {
+          markReported(emailData);
           this.textContent = 'Reported';
           this.style.background = '#16a34a';
         } else {
@@ -284,13 +326,14 @@ function analyzeEmailContainer(container) {
           return;
         }
 
-        chrome.storage.local.get(['deletedEmails', 'ackedDeletions'], ({ deletedEmails = [], ackedDeletions = [] }) => {
+        chrome.storage.local.get(['deletedEmails', 'ackedDeletions', 'reportedEmails'], ({ deletedEmails = [], ackedDeletions = [], reportedEmails = [] }) => {
           const match = deletedEmails.find(d => matchesDeletion(emailData, d));
           if (match && !ackedDeletions.includes(match.id)) {
             showPhishingCover(container);
             chrome.storage.local.set({ ackedDeletions: [...ackedDeletions, match.id] });
           } else {
-            const banner = createBanner(response.result, emailData);
+            const reported = reportedEmails.some(r => r.key === emailKey(emailData));
+            const banner = createBanner(response.result, emailData, reported);
             container.insertBefore(banner, container.firstChild);
           }
         });

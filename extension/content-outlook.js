@@ -30,7 +30,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (!currentEmailData) { sendResponse({ ok: false, error: 'No email data' }); return true; }
     safeSendMessage(
       { type: 'REPORT_EMAIL', data: buildReportPayload(currentEmailData) },
-      r => sendResponse(r?.result ? { ok: true } : { ok: false, error: r?.error || 'Failed' })
+      r => {
+        if (r?.result) {
+          markReported(currentEmailData);
+          sendResponse({ ok: true });
+        } else {
+          sendResponse({ ok: false, error: r?.error || 'Failed' });
+        }
+      }
     );
     return true;
   }
@@ -55,6 +62,25 @@ function buildReportPayload(d) {
 function matchesDeletion(emailData, d) {
   const n = s => (s || '').toLowerCase().trim();
   return n(emailData.subject) === n(d.subject) && n(emailData.sender) === n(d.sender);
+}
+
+function emailKey(d) {
+  const n = s => (s || '').toLowerCase().trim();
+  return `${n(d.subject)}|${n(d.sender)}`;
+}
+
+function markReported(emailData) {
+  chrome.storage.local.get(['reportedEmails'], ({ reportedEmails = [] }) => {
+    const key = emailKey(emailData);
+    if (reportedEmails.some(r => r.key === key)) return;
+    reportedEmails.unshift({
+      key,
+      subject: emailData.subject,
+      sender: emailData.sender,
+      reportedAt: Date.now(),
+    });
+    chrome.storage.local.set({ reportedEmails: reportedEmails.slice(0, 200) });
+  });
 }
 
 // ── Outlook DOM helpers ───────────────────────────────────────────────────────
@@ -246,7 +272,7 @@ const DESCS  = {
   critical: 'This email shows strong signs of phishing. Do not interact with it.',
 };
 
-function createBanner(result, emailData) {
+function createBanner(result, emailData, reported = false) {
   const level  = result.risk_level || 'low';
   const score  = result.risk_score ?? 0;
   const isSafe = level === 'low';
@@ -267,24 +293,29 @@ function createBanner(result, emailData) {
   };
 
   const toggleHtml  = !isSafe ? `<span class="phishguard-bar-toggle">▼</span>` : '';
+  const reportButton = reported
+    ? `<button class="phishguard-btn phishguard-btn-report" disabled style="background:#16a34a">✓ Already Reported</button>`
+    : `<button class="phishguard-btn phishguard-btn-report">Report as Phishing</button>`;
   const detailsHtml = !isSafe ? `
     <div class="phishguard-details pg-${level}">
       <div class="phishguard-desc">${DESCS[level] || ''}</div>
       ${authHtml}
       ${signalHtml ? `<div class="phishguard-signals">${signalHtml}</div>` : ''}
       <div class="phishguard-actions">
-        <button class="phishguard-btn phishguard-btn-report">Report as Phishing</button>
+        ${reportButton}
         <button class="phishguard-btn phishguard-btn-dismiss">Dismiss</button>
       </div>
     </div>` : '';
 
   const safeAuthHtml = isSafe && authHtml ? `<div style="margin:4px 16px 0">${authHtml}</div>` : '';
+  const reportedBadge = reported ? `<span class="phishguard-bar-reported" title="You reported this email">✓</span>` : '';
 
   wrap.innerHTML = `
     <div class="phishguard-bar pg-${level}">
       <span class="phishguard-bar-icon">${levelIcons[level] || ''}</span>
       <span class="phishguard-bar-label">PhishGuard: ${LABELS[level] || level}</span>
       <span class="phishguard-bar-score">· ${score}/100</span>
+      ${reportedBadge}
       ${toggleHtml}
       <button class="phishguard-bar-close" title="Dismiss">×</button>
     </div>
@@ -306,8 +337,14 @@ function createBanner(result, emailData) {
     safeSendMessage(
       { type: 'REPORT_EMAIL', data: buildReportPayload(emailData) },
       response => {
-        if (response?.result) { this.textContent = 'Reported'; this.style.background = '#16a34a'; }
-        else { this.textContent = 'Error — try again'; this.disabled = false; }
+        if (response?.result) {
+          markReported(emailData);
+          this.textContent = '✓ Reported';
+          this.style.background = '#16a34a';
+        } else {
+          this.textContent = 'Error — try again';
+          this.disabled = false;
+        }
       }
     );
   });
@@ -356,13 +393,14 @@ function analyzePane(pane) {
           return;
         }
 
-        chrome.storage.local.get(['deletedEmails', 'ackedDeletions'], ({ deletedEmails = [], ackedDeletions = [] }) => {
+        chrome.storage.local.get(['deletedEmails', 'ackedDeletions', 'reportedEmails'], ({ deletedEmails = [], ackedDeletions = [], reportedEmails = [] }) => {
           const match = deletedEmails.find(d => matchesDeletion(emailData, d));
           if (match && !ackedDeletions.includes(match.id)) {
             showPhishingCover(pane);
             chrome.storage.local.set({ ackedDeletions: [...ackedDeletions, match.id] });
           } else {
-            const banner = createBanner(response.result, emailData);
+            const reported = reportedEmails.some(r => r.key === emailKey(emailData));
+            const banner = createBanner(response.result, emailData, reported);
             pane.insertBefore(banner, pane.firstChild);
           }
         });

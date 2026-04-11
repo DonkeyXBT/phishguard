@@ -150,6 +150,20 @@ function showResult(scan) {
   reportBtn.disabled   = false;
   reportBtn.className  = 'btn-report';
   reportBtn.innerHTML  = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg> Report as Phishing';
+
+  // Check if this email was already reported by the user
+  const emailData = scan.email_data || window._currentEmailData;
+  if (emailData) {
+    const n = s => (s || '').toLowerCase().trim();
+    const key = `${n(emailData.subject)}|${n(emailData.sender)}`;
+    chrome.storage.local.get(['reportedEmails'], ({ reportedEmails = [] }) => {
+      if (reportedEmails.some(r => r.key === key)) {
+        reportBtn.classList.add('reported');
+        reportBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Already Reported';
+        reportBtn.disabled = true;
+      }
+    });
+  }
 }
 
 // ── Report button ─────────────────────────────────────────────────────────────
@@ -169,6 +183,18 @@ reportBtn.addEventListener('click', () => {
     if (response.ok) {
       reportBtn.classList.add('reported');
       reportBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Reported to Security Team';
+      // Persist the reported status — content script also does this, but ensure it's set
+      const emailData = window._currentEmailData;
+      if (emailData) {
+        const n = s => (s || '').toLowerCase().trim();
+        const key = `${n(emailData.subject)}|${n(emailData.sender)}`;
+        chrome.storage.local.get(['reportedEmails'], ({ reportedEmails = [] }) => {
+          if (!reportedEmails.some(r => r.key === key)) {
+            reportedEmails.unshift({ key, subject: emailData.subject, sender: emailData.sender, reportedAt: Date.now() });
+            chrome.storage.local.set({ reportedEmails: reportedEmails.slice(0, 200) });
+          }
+        });
+      }
     } else {
       reportBtn.disabled  = false;
       reportBtn.innerHTML = (response.error || 'Failed — try again');
@@ -213,6 +239,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
         return;
       }
       if (response && response.scan) {
+        if (response.emailData) window._currentEmailData = response.emailData;
         showResult(response.scan);
       } else if (response && response.analyzing && pollCount < maxPolls) {
         // Still analyzing — keep polling
