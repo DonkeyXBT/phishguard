@@ -256,11 +256,11 @@ function createBanner(result, emailData) {
 
 // ── Analysis ──────────────────────────────────────────────────────────────────
 function analyzeEmailContainer(container) {
-  if (container.hasAttribute(ANALYZED_ATTR)) return;
-  container.setAttribute(ANALYZED_ATTR, '1');
-
   const emailData = parseGmailEmail(container);
   if (!emailData.sender && !emailData.body_text) return;
+
+  // Remove any existing PhishGuard elements before re-scanning
+  container.querySelectorAll('.phishguard-wrap, .phishguard-loading, .phishguard-cover').forEach(el => el.remove());
 
   analyzing = true;
   currentEmailData = emailData;
@@ -304,51 +304,57 @@ function analyzeEmailContainer(container) {
 function scanForEmails() {
   currentUserEmail = getUserEmail();
 
-  // If we already have a PhishGuard banner visible on this page, skip
-  if (document.querySelector('.phishguard-wrap, .phishguard-loading, .phishguard-cover')) return;
-
-  // Find the last (most recent) message container in the thread — only analyze that one
+  // Find all message containers in the thread
   const selectors = [
-    '.adn.ads:not([data-phishguard-analyzed])',
-    '.gs:not([data-phishguard-analyzed])',
-    '[data-message-id]:not([data-phishguard-analyzed])',
-    '.nH.hx:not([data-phishguard-analyzed])',
+    '.adn.ads',
+    '.gs',
+    '[data-message-id]',
+    '.nH.hx',
   ];
   const allContainers = document.querySelectorAll(selectors.join(', '));
-  // Pick only the last container (most recent message in the thread)
   const containers = Array.from(allContainers).filter(el =>
     el.querySelector('.a3s') || el.querySelector('.a3s.aiL') || el.querySelector('[data-message-id] .ii.gt div') || el.querySelector('.ii.gt')
   );
   const target = containers[containers.length - 1];
-  if (target) {
-    // Mark all containers as analyzed so we don't process them again
-    containers.forEach(el => el.setAttribute(ANALYZED_ATTR, '1'));
-    analyzeEmailContainer(target);
+  if (!target) return;
+
+  // Already analyzed this exact element AND a banner is still visible? skip
+  if (target.hasAttribute(ANALYZED_ATTR) && target.querySelector('.phishguard-wrap, .phishguard-loading, .phishguard-cover')) {
+    return;
   }
+
+  // Mark all containers as analyzed
+  containers.forEach(el => el.setAttribute(ANALYZED_ATTR, '1'));
+  analyzeEmailContainer(target);
 }
 
 // ── Track email switches (Gmail SPA navigation) ──────────────────────────────
+let lastUrl = location.href;
 let lastSubject = '';
 let lastSender  = '';
 
 function detectEmailSwitch() {
+  // Gmail uses URL hash for thread navigation: #inbox/abc123 → #inbox/xyz456
+  const urlChanged = location.href !== lastUrl;
+  if (urlChanged) lastUrl = location.href;
+
   const subjectEl = document.querySelector('h2[data-legacy-thread-id], [data-thread-id] h2, .hP');
   const subject = subjectEl?.textContent?.trim() || '';
   const senderEl = document.querySelector('.adn.ads [email], .gs [email], .gD');
   const sender = senderEl?.getAttribute('email') || senderEl?.textContent?.trim() || '';
 
-  if (subject && sender && (subject !== lastSubject || sender !== lastSender)) {
+  const subjectChanged = subject && subject !== lastSubject;
+  const senderChanged  = sender && sender !== lastSender;
+
+  if (urlChanged || subjectChanged || senderChanged) {
     lastSubject = subject;
     lastSender  = sender;
-    // Clear analyzed flags so the email gets re-scanned
-    document.querySelectorAll(`[${ANALYZED_ATTR}]`).forEach(el => {
-      el.removeAttribute(ANALYZED_ATTR);
-      el.querySelectorAll('.phishguard-wrap, .phishguard-loading, .phishguard-cover').forEach(pg => pg.remove());
-    });
+    // Clear analyzed flags AND remove old PhishGuard elements anywhere in the document
+    document.querySelectorAll(`[${ANALYZED_ATTR}]`).forEach(el => el.removeAttribute(ANALYZED_ATTR));
+    document.querySelectorAll('.phishguard-wrap, .phishguard-loading, .phishguard-cover').forEach(el => el.remove());
     currentScan = null;
     currentEmailData = null;
     analyzing = false;
-    scanForEmails();
   }
 }
 

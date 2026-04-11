@@ -324,10 +324,14 @@ function analyzePane(pane) {
 
   const key = emailData.subject + '|' + emailData.sender;
   if (lastAnalyzedKey === key) return;
-  lastAnalyzedKey = key;
 
-  pane.querySelectorAll('.phishguard-wrap, .phishguard-loading, .phishguard-cover').forEach(el => el.remove());
-  pane.removeAttribute(ANALYZED_ATTR);
+  // New email detected — clear ALL previous PhishGuard elements anywhere in the document
+  document.querySelectorAll('.phishguard-wrap, .phishguard-loading, .phishguard-cover').forEach(el => el.remove());
+  document.querySelectorAll(`[${ANALYZED_ATTR}]`).forEach(el => el.removeAttribute(ANALYZED_ATTR));
+
+  lastAnalyzedKey = key;
+  currentScan = null;
+  currentEmailData = null;
   pane.setAttribute(ANALYZED_ATTR, '1');
 
   analyzing = true;
@@ -374,10 +378,10 @@ let lastUrl = location.href;
 const observer = new MutationObserver(() => {
   if (!contextValid) { observer.disconnect(); return; }
 
-  // Detect SPA navigation (folder change: inbox → junk, etc.)
+  // Detect URL change (folder navigation)
   if (location.href !== lastUrl) {
     lastUrl = location.href;
-    lastAnalyzedKey = ''; // reset so the next email gets scanned
+    lastAnalyzedKey = '';
     currentScan = null;
     currentEmailData = null;
   }
@@ -385,11 +389,9 @@ const observer = new MutationObserver(() => {
   clearTimeout(scanTimer);
   scanTimer = setTimeout(() => {
     if (!contextValid) return;
-    // Skip if we already have a banner visible for this email
-    if (document.querySelector('.phishguard-wrap, .phishguard-loading, .phishguard-cover')) return;
     const pane = findReadingPane();
-    if (pane) analyzePane(pane);
-  }, 600);
+    if (pane) analyzePane(pane); // analyzePane decides if it's the same email or new
+  }, 400);
 });
 observer.observe(document.body, { childList: true, subtree: true });
 setTimeout(() => { const pane = findReadingPane(); if (pane) analyzePane(pane); }, 600);
