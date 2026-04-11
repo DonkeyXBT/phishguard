@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server'
+import { after } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { analyzeEmail } from '@/lib/analyzer'
 import { getApiKeyOrg, apiKeyFromRequest } from '@/lib/auth'
-import { getClassifier } from '@/lib/ml-scorer'
+import { getClassifier, saveClassifier } from '@/lib/ml-scorer'
 import { ok, err } from '@/lib/response'
 
 function extractDomain(sender?: string | null): string | null {
@@ -84,6 +85,30 @@ export async function POST(req: NextRequest) {
         ...result.signals,
       ]
       result.summary = `${domain} is on your organization's blacklist — treat this email as phishing.`
+    }
+  }
+
+  // ── Weak-label training from analyzer confidence ────────────────────────
+  // Use clearly-classified emails as additional training data:
+  //   score >= 80 → confidently phishing
+  //   score <= 10 → confidently legitimate
+  // Skip the ambiguous middle zone to avoid teaching the model bad signals.
+  // Best-effort, non-blocking — never let this slow down the response.
+  const text = [body.subject ?? '', body.body_text ?? ''].join(' ').trim()
+  if (text.length >= 30) {
+    const isClearPhish = result.riskScore >= 80
+    const isClearHam = result.riskScore <= 10
+    if (isClearPhish || isClearHam) {
+      // Run after the response is sent — Vercel keeps the function alive for after()
+      after(async () => {
+        try {
+          const classifier = await getClassifier()
+          classifier.train(text, isClearPhish)
+          await saveClassifier(classifier, 1)
+        } catch (e) {
+          console.error('[analyze] weak-label training failed:', e)
+        }
+      })
     }
   }
 
