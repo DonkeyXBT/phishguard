@@ -66,6 +66,14 @@ model EmailReport {
   attachments  EmailAttachment[]
   actions      AdminAction[]
 
+  @@index([orgId])
+  @@index([status])
+  @@index([riskLevel])
+  @@index([reportedAt(sort: Desc)])
+  @@index([reviewedAt(sort: Desc)])
+  @@index([senderDomain])
+  @@index([status, reportedAt(sort: Desc)])
+  @@index([orgId, status])
   @@map("email_reports")
 }
 

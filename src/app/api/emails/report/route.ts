@@ -5,6 +5,7 @@ import { getApiKeyOrg, apiKeyFromRequest } from '@/lib/auth'
 import { ok, err } from '@/lib/response'
 import { isShortUrl, resolveUrl } from '@/lib/url-resolver'
 import { notifyHighRisk } from '@/lib/notifications'
+import { invalidateCache } from '@/lib/cache'
 
 function extractDomain(sender?: string | null) {
   if (!sender) return null
@@ -81,6 +82,10 @@ export async function POST(req: NextRequest) {
     },
     include: { links: true, attachments: true, actions: true },
   })
+
+  // Invalidate cached aggregations so dashboard shows fresh data
+  invalidateCache('stats:')
+  invalidateCache('analytics:')
 
   // Fire alert for high-risk reports (non-blocking)
   if (result.riskLevel === 'high' || result.riskLevel === 'critical') {

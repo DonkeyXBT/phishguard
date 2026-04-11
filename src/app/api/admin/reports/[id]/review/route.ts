@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/auth'
 import { getClassifier, saveClassifier } from '@/lib/ml-scorer'
+import { invalidateCache } from '@/lib/cache'
 import { ok, err } from '@/lib/response'
 import { audit } from '@/lib/audit'
 
@@ -29,6 +30,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   ])
 
   audit(req, { userId: user.id, userEmail: user.email, action: `report.${action}`, resource: `report:${id}`, detail: notes ?? null })
+
+  // Invalidate cached aggregations so dashboard shows fresh data
+  invalidateCache('stats:')
+  invalidateCache('analytics:')
 
   // ── Incremental ML training ──────────────────────────────────────────────
   // Train the classifier on this email so future analyses learn from the admin's decision.
