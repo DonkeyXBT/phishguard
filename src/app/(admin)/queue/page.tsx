@@ -43,37 +43,38 @@ export default function QueuePage() {
   useEffect(() => { load() }, [status, risk])
 
   return (
-    <div className="p-8">
+    <div className="p-8 page-enter">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Review Queue</h1>
-          <p className="text-[var(--text-tertiary)] text-sm mt-1">{reports.length} reports</p>
+          <p className="kicker text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-1" style={{ fontFamily: 'var(--mono)' }}>Admin</p>
+          <h1 className="text-2xl font-bold text-[var(--text-heading)]">Review <em className="not-italic text-[var(--signal)]" style={{ fontFamily: 'var(--serif)' }}>queue</em></h1>
+          <p className="text-[var(--text-tertiary)] text-sm mt-1" style={{ fontFamily: 'var(--mono)' }}>{reports.length} reports</p>
         </div>
-        <button onClick={load} className="btn-press text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1.5">
+        <button onClick={load} className="btn-press text-sm text-[var(--accent)] hover:text-[var(--accent-deep)] flex items-center gap-1.5 transition-colors">
           <RefreshCw size={14} /> Refresh
         </button>
       </div>
 
       {/* Filters */}
       <div className="flex gap-3 mb-6 flex-wrap">
-        <div className="flex gap-1 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg p-1 shadow-[var(--shadow-sm)]">
+        <div className="flex gap-1 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg p-1">
           {STATUS_FILTERS.map(s => (
             <button key={s} onClick={() => setStatus(s)}
               className={`filter-pill px-3 py-1.5 rounded-md text-xs font-medium capitalize ${
                 status === s
-                  ? 'bg-blue-600 text-white shadow-sm'
+                  ? 'bg-[var(--signal)] text-[var(--ink)] shadow-sm'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
               }`}>
               {s || 'All'}
             </button>
           ))}
         </div>
-        <div className="flex gap-1 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg p-1 shadow-[var(--shadow-sm)]">
+        <div className="flex gap-1 bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg p-1">
           {RISK_FILTERS.map(r => (
             <button key={r} onClick={() => setRisk(r)}
               className={`filter-pill px-3 py-1.5 rounded-md text-xs font-medium capitalize ${
                 risk === r
-                  ? 'bg-blue-600 text-white shadow-sm'
+                  ? 'bg-[var(--signal)] text-[var(--ink)] shadow-sm'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
               }`}>
               {r || 'All Risk'}
@@ -83,7 +84,7 @@ export default function QueuePage() {
       </div>
 
       {/* Table */}
-      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-primary)] overflow-hidden shadow-[var(--shadow-sm)]">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-primary)] overflow-hidden">
         {loading && <div className="p-8 text-center text-[var(--text-tertiary)]">Loading...</div>}
         {!loading && reports.length === 0 && (
           <div className="p-12 text-center text-[var(--text-tertiary)]">
@@ -94,12 +95,12 @@ export default function QueuePage() {
         {!loading && reports.length > 0 && (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]">
-                <th className="text-left px-4 py-3 text-[var(--text-tertiary)] text-xs uppercase tracking-wide font-medium">Subject / Sender</th>
-                <th className="text-left px-4 py-3 text-[var(--text-tertiary)] text-xs uppercase tracking-wide font-medium">Reporter</th>
-                <th className="text-left px-4 py-3 text-[var(--text-tertiary)] text-xs uppercase tracking-wide font-medium">Risk</th>
-                <th className="text-left px-4 py-3 text-[var(--text-tertiary)] text-xs uppercase tracking-wide font-medium">Status</th>
-                <th className="text-left px-4 py-3 text-[var(--text-tertiary)] text-xs uppercase tracking-wide font-medium">Reported</th>
+              <tr className="border-b border-[var(--border-primary)] bg-[var(--bg-active)]">
+                <th className="text-left px-4 py-3 text-[var(--text-tertiary)] text-xs uppercase tracking-widest font-medium" style={{ fontFamily: 'var(--mono)' }}>Subject / Sender</th>
+                <th className="text-left px-4 py-3 text-[var(--text-tertiary)] text-xs uppercase tracking-widest font-medium" style={{ fontFamily: 'var(--mono)' }}>Reporter</th>
+                <th className="text-left px-4 py-3 text-[var(--text-tertiary)] text-xs uppercase tracking-widest font-medium" style={{ fontFamily: 'var(--mono)' }}>Risk</th>
+                <th className="text-left px-4 py-3 text-[var(--text-tertiary)] text-xs uppercase tracking-widest font-medium" style={{ fontFamily: 'var(--mono)' }}>Status</th>
+                <th className="text-left px-4 py-3 text-[var(--text-tertiary)] text-xs uppercase tracking-widest font-medium" style={{ fontFamily: 'var(--mono)' }}>Reported</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-secondary)]">
@@ -108,12 +109,12 @@ export default function QueuePage() {
                   className="hover:bg-[var(--bg-hover)] cursor-pointer row-hover">
                   <td className="px-4 py-3">
                     <div className="font-medium text-[var(--text-primary)] truncate max-w-xs">{r.subject ?? '(no subject)'}</div>
-                    <div className="text-[var(--text-tertiary)] truncate max-w-xs text-xs">{r.sender ?? 'unknown'}</div>
+                    <div className="text-[var(--text-tertiary)] truncate max-w-xs text-xs" style={{ fontFamily: 'var(--mono)' }}>{r.sender ?? 'unknown'}</div>
                   </td>
-                  <td className="px-4 py-3 text-[var(--text-secondary)] text-xs">{r.reporterEmail}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)] text-xs" style={{ fontFamily: 'var(--mono)' }}>{r.reporterEmail}</td>
                   <td className="px-4 py-3"><RiskBadge level={r.riskLevel} score={r.riskScore} /></td>
                   <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
-                  <td className="px-4 py-3 text-[var(--text-tertiary)] whitespace-nowrap text-xs">{timeAgo(r.reportedAt)}</td>
+                  <td className="px-4 py-3 text-[var(--text-tertiary)] whitespace-nowrap text-xs" style={{ fontFamily: 'var(--mono)' }}>{timeAgo(r.reportedAt)}</td>
                 </tr>
               ))}
             </tbody>

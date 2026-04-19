@@ -7,17 +7,17 @@ interface Signal {
 }
 
 const severityConfig: Record<string, { border: string; bg: string; text: string; icon: typeof Info }> = {
-  info:     { border: 'border-blue-200 dark:border-blue-800', bg: 'bg-blue-50 dark:bg-blue-950/30', text: 'text-blue-700 dark:text-blue-400', icon: Info },
-  warning:  { border: 'border-amber-200 dark:border-amber-800', bg: 'bg-amber-50 dark:bg-amber-950/30', text: 'text-amber-700 dark:text-amber-400', icon: AlertTriangle },
-  danger:   { border: 'border-orange-200 dark:border-orange-800', bg: 'bg-orange-50 dark:bg-orange-950/30', text: 'text-orange-700 dark:text-orange-400', icon: ShieldAlert },
-  critical: { border: 'border-red-200 dark:border-red-800', bg: 'bg-red-50 dark:bg-red-950/30', text: 'text-red-700 dark:text-red-400', icon: AlertOctagon },
+  info:     { border: 'border-[var(--signal)]/20', bg: 'bg-[var(--signal)]/5', text: 'text-[var(--signal)]', icon: Info },
+  warning:  { border: 'border-[var(--amber)]/20', bg: 'bg-[var(--amber)]/5', text: 'text-[var(--amber)]', icon: AlertTriangle },
+  danger:   { border: 'border-[var(--rust)]/20', bg: 'bg-[var(--rust)]/5', text: 'text-[var(--rust)]', icon: ShieldAlert },
+  critical: { border: 'border-red-500/20', bg: 'bg-red-500/5', text: 'text-red-400', icon: AlertOctagon },
 }
 
 export default function SignalsList({ signals }: { signals: Signal[] }) {
   if (!signals?.length) {
     return (
       <div className="text-center py-8 text-[var(--text-tertiary)]">
-        <ShieldCheck size={32} className="mx-auto mb-2 text-emerald-500" />
+        <ShieldCheck size={32} className="mx-auto mb-2 text-[var(--signal)]" />
         <div>No suspicious signals detected</div>
       </div>
     )
@@ -28,7 +28,7 @@ export default function SignalsList({ signals }: { signals: Signal[] }) {
         const c = severityConfig[s.severity] ?? severityConfig.info
         const Icon = c.icon
         return (
-          <div key={i} className={`rounded-lg border p-3 ${c.border} ${c.bg}`}>
+          <div key={i} className={`rounded border p-3 ${c.border} ${c.bg}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-2">
                 <Icon size={16} className={`mt-0.5 ${c.text}`} />
@@ -37,7 +37,7 @@ export default function SignalsList({ signals }: { signals: Signal[] }) {
                   <div className="text-xs text-[var(--text-tertiary)] mt-0.5">{s.detail}</div>
                 </div>
               </div>
-              <div className={`shrink-0 text-xs font-bold ${c.text}`}>+{s.score}</div>
+              <div className={`shrink-0 text-xs font-bold ${c.text}`} style={{ fontFamily: 'var(--mono)' }}>+{s.score}</div>
             </div>
           </div>
         )

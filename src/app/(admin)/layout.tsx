@@ -6,7 +6,7 @@ import { useEffect } from 'react'
 import { useTheme } from '@/components/ThemeProvider'
 import {
   LayoutDashboard, Inbox, Building2, Globe, FileText,
-  BarChart3, Settings, LogOut, Shield, Sun, Moon, Brain,
+  BarChart3, Settings, LogOut, Sun, Moon, Brain,
 } from 'lucide-react'
 
 const navGroups = [
@@ -53,12 +53,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Logo */}
         <div className="p-5 border-b border-[var(--border-secondary)]">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-700 to-blue-500 rounded-lg flex items-center justify-center">
-              <Shield size={16} className="text-white" />
-            </div>
+            {/* Cyfenced fence logo mark */}
+            <svg width="32" height="32" viewBox="0 0 64 64" aria-label="Cyfenced">
+              <rect x="10" y="14" width="38" height="3" fill="var(--text-primary)" />
+              <rect x="10" y="47" width="38" height="3" fill="var(--text-primary)" />
+              <rect x="10" y="10" width="3" height="44" fill="var(--text-primary)" />
+              <rect x="18" y="17" width="3" height="30" fill="var(--text-primary)" />
+              <rect x="26" y="17" width="3" height="30" fill="var(--text-primary)" />
+              <rect x="34" y="17" width="3" height="30" fill="var(--text-primary)" />
+              <rect x="42" y="6" width="3" height="41" fill="var(--accent)" />
+              <circle cx="43.5" cy="4" r="1.6" fill="var(--accent)" />
+            </svg>
             <div>
-              <div className="font-semibold text-[var(--text-primary)] text-sm">PhishGuard</div>
-              <div className="text-xs text-[var(--text-tertiary)]">Admin Console</div>
+              <div className="font-semibold text-[var(--text-primary)] text-sm tracking-tight">
+                cyfenced<span className="text-[var(--accent)]">.</span>
+              </div>
+              <div className="text-[10px] font-[var(--mono)] tracking-[2px] uppercase text-[var(--text-tertiary)]" style={{ fontFamily: 'var(--mono)' }}>
+                PhishGuard
+              </div>
             </div>
           </div>
         </div>
@@ -67,7 +79,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav className="flex-1 p-3 overflow-y-auto">
           {navGroups.map(group => (
             <div key={group.label} className="mb-4">
-              <div className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+              <div className="px-3 mb-1 text-[10px] font-medium uppercase tracking-[2px] text-[var(--text-tertiary)]" style={{ fontFamily: 'var(--mono)' }}>
                 {group.label}
               </div>
               <div className="space-y-0.5">
@@ -76,12 +88,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   const Icon = item.icon
                   return (
                     <Link key={item.href} href={item.href}
-                      className={`nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm ${
+                      className={`nav-link flex items-center gap-3 px-3 py-2 rounded text-sm ${
                         active
                           ? 'bg-[var(--bg-active)] text-[var(--text-active)] font-medium'
                           : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
                       }`}>
-                      <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
+                      <Icon size={18} strokeWidth={active ? 2 : 1.5} />
                       {item.label}
                     </Link>
                   )
@@ -94,20 +106,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Bottom */}
         <div className="p-3 border-t border-[var(--border-secondary)]">
           <button onClick={toggle}
-            className="nav-link btn-press w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] mb-1">
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            className="nav-link btn-press w-full flex items-center gap-3 px-3 py-2 rounded text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] mb-1">
+            {theme === 'ink' ? <Sun size={18} strokeWidth={1.5} /> : <Moon size={18} strokeWidth={1.5} />}
+            {theme === 'ink' ? 'Paper Mode' : 'Ink Mode'}
           </button>
           <button onClick={logout}
-            className="nav-link btn-press w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-red-600 dark:hover:text-red-400">
-            <LogOut size={18} />
+            className="nav-link btn-press w-full flex items-center gap-3 px-3 py-2 rounded text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--rust)]">
+            <LogOut size={18} strokeWidth={1.5} />
             Logout
           </button>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto bg-[var(--bg-secondary)]">
+      <main className="flex-1 overflow-auto bg-[var(--bg-primary)]">
         <div className="page-enter">{children}</div>
       </main>
     </div>

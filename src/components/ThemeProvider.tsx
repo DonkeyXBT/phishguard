@@ -2,10 +2,10 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 
-type Theme = 'light' | 'dark'
+type Theme = 'ink' | 'paper'
 
 const ThemeContext = createContext<{ theme: Theme; toggle: () => void }>({
-  theme: 'light',
+  theme: 'ink',
   toggle: () => {},
 })
 
@@ -14,23 +14,22 @@ export function useTheme() {
 }
 
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light')
+  const [theme, setTheme] = useState<Theme>('ink')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem('theme') as Theme | null
-    const preferred = stored ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-    setTheme(preferred)
+    if (stored === 'paper') setTheme('paper')
     setMounted(true)
   }, [])
 
   useEffect(() => {
     if (!mounted) return
-    document.documentElement.classList.toggle('dark', theme === 'dark')
+    document.documentElement.classList.toggle('paper-mode', theme === 'paper')
     localStorage.setItem('theme', theme)
   }, [theme, mounted])
 
-  const toggle = () => setTheme(t => (t === 'light' ? 'dark' : 'light'))
+  const toggle = () => setTheme(t => (t === 'ink' ? 'paper' : 'ink'))
 
   if (!mounted) {
     return <div style={{ visibility: 'hidden' }}>{children}</div>

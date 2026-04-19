@@ -91,27 +91,28 @@ export default function SettingsPage() {
   if (loading) return <div className="p-8 text-[var(--text-tertiary)]">Loading...</div>
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-8 max-w-2xl page-enter">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Settings</h1>
+        <p className="kicker text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-1" style={{ fontFamily: 'var(--mono)' }}>Admin</p>
+        <h1 className="text-2xl font-bold text-[var(--text-heading)]">System <em className="not-italic text-[var(--signal)]" style={{ fontFamily: 'var(--serif)' }}>settings</em></h1>
         <p className="text-[var(--text-tertiary)] text-sm mt-1">Manage your account security</p>
       </div>
 
-      {message && <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-sm rounded-lg p-3 mb-4">{message}</div>}
-      {error && <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm rounded-lg p-3 mb-4">{error}</div>}
+      {message && <div className="bg-[var(--signal)]/10 border border-[var(--signal-deep)] text-[var(--signal)] text-sm rounded-lg p-3 mb-4">{message}</div>}
+      {error && <div className="bg-[var(--rust)]/10 border border-[var(--rust)] text-[var(--rust)] text-sm rounded-lg p-3 mb-4">{error}</div>}
 
-      <div className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-2xl p-6 shadow-[var(--shadow-sm)]">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-1">Two-Factor Authentication</h2>
+      <div className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-2xl p-6">
+        <h2 className="text-lg font-semibold text-[var(--text-heading)] mb-1">Two-Factor Authentication</h2>
         <p className="text-sm text-[var(--text-secondary)] mb-4">
           Add an extra layer of security to your account with a TOTP authenticator app.
         </p>
 
         <div className="flex items-center gap-3 mb-4">
           {mfaEnabled
-            ? <ShieldCheck size={18} className="text-emerald-600 dark:text-emerald-400" />
+            ? <ShieldCheck size={18} className="text-[var(--signal)]" />
             : <ShieldOff size={18} className="text-[var(--text-tertiary)]" />
           }
-          <span className={`text-sm font-medium ${mfaEnabled ? 'text-emerald-700 dark:text-emerald-400' : 'text-[var(--text-tertiary)]'}`}>
+          <span className={`text-sm font-medium ${mfaEnabled ? 'text-[var(--signal)]' : 'text-[var(--text-tertiary)]'}`}>
             {mfaEnabled ? 'Enabled' : 'Disabled'}
           </span>
         </div>
@@ -119,12 +120,12 @@ export default function SettingsPage() {
         {step === 'idle' && (
           mfaEnabled ? (
             <button onClick={() => setStep('disable')}
-              className="btn-press bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-4 py-2 rounded-lg">
+              className="btn-press bg-[var(--rust)] hover:brightness-110 text-white text-sm font-semibold px-4 py-2 rounded-lg">
               Disable MFA
             </button>
           ) : (
             <button onClick={startSetup}
-              className="btn-press bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg">
+              className="btn-press bg-[var(--signal)] hover:bg-[var(--signal-deep)] text-[var(--ink)] text-sm font-semibold px-4 py-2 rounded-lg">
               Enable MFA
             </button>
           )
@@ -136,25 +137,27 @@ export default function SettingsPage() {
               <p className="text-sm text-[var(--text-secondary)] mb-2">
                 Scan this QR code with your authenticator app (Google Authenticator, Authy, 1Password, etc.):
               </p>
-              <div className="bg-white p-4 rounded-lg inline-block mb-3 shadow-[var(--shadow-sm)]">
+              <div className="bg-[var(--paper)] p-4 rounded-lg inline-block mb-3">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otpauthUri)}`}
                   alt="MFA QR Code" width={200} height={200} />
               </div>
               <p className="text-xs text-[var(--text-tertiary)] mb-1">Or enter this secret manually:</p>
-              <code className="block bg-[var(--bg-tertiary)] text-emerald-700 dark:text-emerald-400 text-xs p-2 rounded font-mono break-all select-all">{secret}</code>
+              <code className="block bg-[var(--bg-input)] text-[var(--signal)] text-xs p-2 rounded break-all select-all" style={{ fontFamily: 'var(--mono)' }}>{secret}</code>
             </div>
             <div>
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5">Verification code</label>
               <input type="text" value={code} onChange={e => setCode(e.target.value)} placeholder="000000"
                 maxLength={6} pattern="[0-9]{6}" autoFocus
-                className="w-full max-w-xs bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5 text-[var(--text-primary)] text-sm text-center tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors" required />
+                className="w-full max-w-xs bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5 text-[var(--text-primary)] text-sm text-center tracking-widest focus:outline-none focus:border-[var(--signal-deep)] transition-colors"
+                style={{ fontFamily: 'var(--mono)' }}
+                required />
             </div>
             <div className="flex gap-2">
-              <button type="submit" className="btn-press bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg">
+              <button type="submit" className="btn-press bg-[var(--signal)] hover:bg-[var(--signal-deep)] text-[var(--ink)] text-sm font-semibold px-4 py-2 rounded-lg">
                 Verify &amp; Enable
               </button>
-              <button type="button" onClick={() => setStep('idle')} className="btn-press bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] text-sm px-4 py-2 rounded-lg">
+              <button type="button" onClick={() => setStep('idle')} className="btn-press border border-[var(--border-primary)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] text-sm px-4 py-2 rounded-lg">
                 Cancel
               </button>
             </div>
@@ -163,17 +166,17 @@ export default function SettingsPage() {
 
         {step === 'disable' && (
           <form onSubmit={confirmDisable} className="space-y-4 mt-4 border-t border-[var(--border-secondary)] pt-4">
-            <p className="text-sm text-amber-700 dark:text-amber-400">Enter your password to confirm disabling MFA.</p>
+            <p className="text-sm text-[var(--amber)]">Enter your password to confirm disabling MFA.</p>
             <div>
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5">Password</label>
               <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password"
-                className="w-full max-w-xs bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5 text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors" required />
+                className="w-full max-w-xs bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5 text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--signal-deep)] transition-colors" required />
             </div>
             <div className="flex gap-2">
-              <button type="submit" className="bg-red-600 hover:bg-red-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              <button type="submit" className="btn-press bg-[var(--rust)] hover:brightness-110 text-white text-sm font-semibold px-4 py-2 rounded-lg">
                 Confirm Disable
               </button>
-              <button type="button" onClick={() => setStep('idle')} className="btn-press bg-[var(--bg-tertiary)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] text-sm px-4 py-2 rounded-lg">
+              <button type="button" onClick={() => setStep('idle')} className="btn-press border border-[var(--border-primary)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] text-sm px-4 py-2 rounded-lg">
                 Cancel
               </button>
             </div>
@@ -182,10 +185,10 @@ export default function SettingsPage() {
       </div>
 
       {/* ── ML Model ── */}
-      <div className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-2xl p-6 shadow-[var(--shadow-sm)] mt-6">
+      <div className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-2xl p-6 mt-6">
         <div className="flex items-center gap-2 mb-1">
-          <Brain size={20} className="text-blue-600 dark:text-blue-400" />
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Machine Learning Model</h2>
+          <Brain size={20} className="text-[var(--accent)]" />
+          <h2 className="text-lg font-semibold text-[var(--text-heading)]">Machine Learning Model</h2>
         </div>
         <p className="text-sm text-[var(--text-secondary)] mb-4">
           The Naive Bayes classifier learns from every email an admin reviews. When you mark an email as phishing
@@ -193,24 +196,24 @@ export default function SettingsPage() {
         </p>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
-          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] border-l-[3px] border-l-blue-500 rounded-lg p-3">
-            <div className="text-xs text-[var(--text-tertiary)] mb-1">Version</div>
+          <div className="bg-[var(--bg-hover)] border border-[var(--border-primary)] border-l-[3px] border-l-[var(--signal)] rounded-lg p-3">
+            <div className="text-xs text-[var(--text-tertiary)] mb-1" style={{ fontFamily: 'var(--mono)' }}>Version</div>
             <div className="text-xl font-bold text-[var(--text-primary)]">v{mlStatus?.version ?? 1}</div>
           </div>
-          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] border-l-[3px] border-l-violet-500 rounded-lg p-3">
-            <div className="text-xs text-[var(--text-tertiary)] mb-1">Total Examples</div>
+          <div className="bg-[var(--bg-hover)] border border-[var(--border-primary)] border-l-[3px] border-l-[var(--accent)] rounded-lg p-3">
+            <div className="text-xs text-[var(--text-tertiary)] mb-1" style={{ fontFamily: 'var(--mono)' }}>Total Examples</div>
             <div className="text-xl font-bold text-[var(--text-primary)]">{mlStatus?.trainedOn ?? 0}</div>
           </div>
-          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] border-l-[3px] border-l-red-500 rounded-lg p-3">
-            <div className="text-xs text-[var(--text-tertiary)] mb-1">Phishing Docs</div>
-            <div className="text-xl font-bold text-red-600 dark:text-red-400">{mlStatus?.phishDocs ?? 0}</div>
+          <div className="bg-[var(--bg-hover)] border border-[var(--border-primary)] border-l-[3px] border-l-[var(--rust)] rounded-lg p-3">
+            <div className="text-xs text-[var(--text-tertiary)] mb-1" style={{ fontFamily: 'var(--mono)' }}>Phishing Docs</div>
+            <div className="text-xl font-bold text-[var(--rust)]">{mlStatus?.phishDocs ?? 0}</div>
           </div>
-          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] border-l-[3px] border-l-emerald-500 rounded-lg p-3">
-            <div className="text-xs text-[var(--text-tertiary)] mb-1">Legitimate Docs</div>
-            <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{mlStatus?.hamDocs ?? 0}</div>
+          <div className="bg-[var(--bg-hover)] border border-[var(--border-primary)] border-l-[3px] border-l-[var(--signal)] rounded-lg p-3">
+            <div className="text-xs text-[var(--text-tertiary)] mb-1" style={{ fontFamily: 'var(--mono)' }}>Legitimate Docs</div>
+            <div className="text-xl font-bold text-[var(--signal)]">{mlStatus?.hamDocs ?? 0}</div>
           </div>
-          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] border-l-[3px] border-l-amber-500 rounded-lg p-3">
-            <div className="text-xs text-[var(--text-tertiary)] mb-1">Vocabulary</div>
+          <div className="bg-[var(--bg-hover)] border border-[var(--border-primary)] border-l-[3px] border-l-[var(--amber)] rounded-lg p-3">
+            <div className="text-xs text-[var(--text-tertiary)] mb-1" style={{ fontFamily: 'var(--mono)' }}>Vocabulary</div>
             <div className="text-xl font-bold text-[var(--text-primary)]">{mlStatus?.vocabularySize ?? 0}</div>
             <div className="text-xs text-[var(--text-tertiary)]">words</div>
           </div>
@@ -219,14 +222,14 @@ export default function SettingsPage() {
         {/* Top tokens */}
         {mlStatus && (mlStatus.topPhishTokens.length > 0 || mlStatus.topHamTokens.length > 0) && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-            <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg p-4">
+            <div className="bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                <div className="w-2 h-2 rounded-full bg-[var(--rust)]"></div>
                 <h3 className="text-sm font-semibold text-[var(--text-primary)]">Top Phishing Words Learned</h3>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {mlStatus.topPhishTokens.map(t => (
-                  <span key={t.token} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 font-medium">
+                  <span key={t.token} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-[var(--rust)]/10 border border-[var(--rust)] text-[var(--rust)] font-medium" style={{ fontFamily: 'var(--mono)' }}>
                     {t.token}
                     <span className="text-[10px] opacity-60">{t.phish}</span>
                   </span>
@@ -234,14 +237,14 @@ export default function SettingsPage() {
                 {mlStatus.topPhishTokens.length === 0 && <span className="text-xs text-[var(--text-tertiary)]">No data yet</span>}
               </div>
             </div>
-            <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg p-4">
+            <div className="bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                <div className="w-2 h-2 rounded-full bg-[var(--signal)]"></div>
                 <h3 className="text-sm font-semibold text-[var(--text-primary)]">Top Legitimate Words Learned</h3>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {mlStatus.topHamTokens.map(t => (
-                  <span key={t.token} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 font-medium">
+                  <span key={t.token} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-[var(--signal)]/10 border border-[var(--signal-deep)] text-[var(--signal)] font-medium" style={{ fontFamily: 'var(--mono)' }}>
                     {t.token}
                     <span className="text-[10px] opacity-60">{t.ham}</span>
                   </span>
@@ -254,9 +257,9 @@ export default function SettingsPage() {
 
         {/* Recent training feed */}
         {mlStatus && mlStatus.recentTraining.length > 0 && (
-          <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg p-4 mb-5">
+          <div className="bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded-lg p-4 mb-5">
             <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3 flex items-center gap-2">
-              <Brain size={14} className="text-blue-600 dark:text-blue-400" />
+              <Brain size={14} className="text-[var(--accent)]" />
               Recent Training Feed
             </h3>
             <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -264,19 +267,19 @@ export default function SettingsPage() {
                 const isPhish = t.status === 'deleted' || t.status === 'escalated'
                 return (
                   <div key={t.id} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border-secondary)]">
-                    <div className={`w-1.5 h-8 rounded-full flex-shrink-0 ${isPhish ? 'bg-red-500' : 'bg-emerald-500'}`}></div>
+                    <div className={`w-1.5 h-8 rounded-full flex-shrink-0 ${isPhish ? 'bg-[var(--rust)]' : 'bg-[var(--signal)]'}`}></div>
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-medium text-[var(--text-primary)] truncate">{t.subject ?? '(no subject)'}</div>
-                      <div className="text-[11px] text-[var(--text-tertiary)] truncate">{t.sender ?? 'unknown'}</div>
+                      <div className="text-[11px] text-[var(--text-tertiary)] truncate" style={{ fontFamily: 'var(--mono)' }}>{t.sender ?? 'unknown'}</div>
                     </div>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border whitespace-nowrap ${
                       isPhish
-                        ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
-                        : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-                    }`}>
+                        ? 'bg-[var(--rust)]/10 text-[var(--rust)] border-[var(--rust)]'
+                        : 'bg-[var(--signal)]/10 text-[var(--signal)] border-[var(--signal-deep)]'
+                    }`} style={{ fontFamily: 'var(--mono)' }}>
                       {isPhish ? 'PHISH' : 'HAM'}
                     </span>
-                    <span className="text-[10px] text-[var(--text-tertiary)] whitespace-nowrap">
+                    <span className="text-[10px] text-[var(--text-tertiary)] whitespace-nowrap" style={{ fontFamily: 'var(--mono)' }}>
                       {new Date(t.reviewedAt).toLocaleDateString()}
                     </span>
                   </div>
@@ -288,11 +291,11 @@ export default function SettingsPage() {
 
         <div className="flex items-center gap-3">
           <button onClick={retrainModel} disabled={retraining}
-            className="btn-press flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg px-4 py-2">
+            className="btn-press flex items-center gap-2 bg-[var(--signal)] hover:bg-[var(--signal-deep)] disabled:opacity-50 text-[var(--ink)] text-sm font-semibold rounded-lg px-4 py-2">
             <RefreshCw size={14} className={retraining ? 'animate-spin' : ''} />
             {retraining ? 'Retraining...' : 'Retrain From All Reports'}
           </button>
-          <span className="text-xs text-[var(--text-tertiary)]">
+          <span className="text-xs text-[var(--text-tertiary)]" style={{ fontFamily: 'var(--mono)' }}>
             Last updated {mlStatus?.updatedAt ? new Date(mlStatus.updatedAt).toLocaleString() : 'never'}
           </span>
         </div>

@@ -73,22 +73,23 @@ export default function MlInsightsPage() {
   ]
 
   return (
-    <div className="p-8">
+    <div className="p-8 page-enter">
       <div className="mb-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-700 to-blue-500 flex items-center justify-center">
-          <Brain size={20} className="text-white" />
+        <div className="w-10 h-10 rounded-xl bg-[var(--signal)] flex items-center justify-center">
+          <Brain size={20} className="text-[var(--ink)]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">ML Insights</h1>
+          <p className="kicker text-xs uppercase tracking-widest text-[var(--text-tertiary)] mb-0.5" style={{ fontFamily: 'var(--mono)' }}>Admin</p>
+          <h1 className="text-2xl font-bold text-[var(--text-heading)]">ML <em className="not-italic text-[var(--signal)]" style={{ fontFamily: 'var(--serif)' }}>insights</em></h1>
           <p className="text-[var(--text-tertiary)] text-sm mt-0.5">See how the machine learning model decides which emails are phishing</p>
         </div>
       </div>
 
       {/* How it works explainer */}
-      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-primary)] p-5 mb-6 shadow-[var(--shadow-sm)]">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-primary)] p-5 mb-6">
         <div className="flex items-center gap-2 mb-3">
-          <HelpCircle size={16} className="text-blue-600 dark:text-blue-400" />
-          <h2 className="font-semibold text-[var(--text-primary)]">How the model decides</h2>
+          <HelpCircle size={16} className="text-[var(--accent)]" />
+          <h2 className="font-semibold text-[var(--text-heading)]">How the model decides</h2>
         </div>
         <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
           This is a <strong>Naive Bayes classifier</strong>. It looks at every word in an email and calculates two probabilities:
@@ -99,16 +100,16 @@ export default function MlInsightsPage() {
       </div>
 
       {/* Test the model */}
-      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-primary)] p-5 mb-6 shadow-[var(--shadow-sm)]">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-primary)] p-5 mb-6">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-violet-600 dark:text-violet-400" />
-            <h2 className="font-semibold text-[var(--text-primary)]">Test the Model</h2>
+            <Sparkles size={16} className="text-[var(--accent)]" />
+            <h2 className="font-semibold text-[var(--text-heading)]">Test the Model</h2>
           </div>
           <div className="flex gap-2">
             {sampleTexts.map(s => (
               <button key={s.label} onClick={() => setText(s.text)}
-                className="btn-press text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded-md px-2 py-1">
+                className="btn-press text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-primary)] hover:bg-[var(--bg-hover)] rounded-md px-2 py-1">
                 {s.label}
               </button>
             ))}
@@ -119,10 +120,10 @@ export default function MlInsightsPage() {
           onChange={e => setText(e.target.value)}
           placeholder="Paste any email text here to see the model's prediction and reasoning..."
           rows={6}
-          className="w-full bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5 text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 mb-3 resize-y"
+          className="w-full bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-3 py-2.5 text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--signal-deep)] mb-3 resize-y"
         />
         <button onClick={() => explain({ text })} disabled={loading || text.length < 10}
-          className="btn-press flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg px-4 py-2">
+          className="btn-press flex items-center gap-2 bg-[var(--signal)] hover:bg-[var(--signal-deep)] disabled:opacity-50 text-[var(--ink)] text-sm font-semibold rounded-lg px-4 py-2">
           <Play size={14} />
           {loading ? 'Analyzing...' : 'Run Model'}
         </button>
@@ -131,10 +132,10 @@ export default function MlInsightsPage() {
       </div>
 
       {/* Recent reports with click-to-explain */}
-      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-primary)] p-5 shadow-[var(--shadow-sm)]">
+      <div className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-primary)] p-5">
         <div className="flex items-center gap-2 mb-3">
-          <FileText size={16} className="text-emerald-600 dark:text-emerald-400" />
-          <h2 className="font-semibold text-[var(--text-primary)]">Recent Reports — Explain Any</h2>
+          <FileText size={16} className="text-[var(--signal)]" />
+          <h2 className="font-semibold text-[var(--text-heading)]">Recent Reports — Explain Any</h2>
         </div>
         <p className="text-xs text-[var(--text-tertiary)] mb-4">Click any report to see what the ML model saw in that specific email.</p>
 
@@ -149,24 +150,24 @@ export default function MlInsightsPage() {
                   className="w-full text-left p-3 hover:bg-[var(--bg-hover)] transition-colors flex items-center gap-3"
                 >
                   <div className={`w-1.5 h-10 rounded-full flex-shrink-0 ${
-                    r.riskLevel === 'critical' ? 'bg-red-500'
-                    : r.riskLevel === 'high' ? 'bg-orange-500'
-                    : r.riskLevel === 'medium' ? 'bg-amber-500'
-                    : 'bg-emerald-500'
+                    r.riskLevel === 'critical' ? 'bg-[var(--rust)]'
+                    : r.riskLevel === 'high' ? 'bg-[var(--amber)]'
+                    : r.riskLevel === 'medium' ? 'bg-[var(--amber)]'
+                    : 'bg-[var(--signal)]'
                   }`}></div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-[var(--text-primary)] truncate">{r.subject ?? '(no subject)'}</div>
-                    <div className="text-xs text-[var(--text-tertiary)] truncate">{r.sender ?? 'unknown'}</div>
+                    <div className="text-xs text-[var(--text-tertiary)] truncate" style={{ fontFamily: 'var(--mono)' }}>{r.sender ?? 'unknown'}</div>
                   </div>
-                  <span className="text-xs text-[var(--text-secondary)] font-mono bg-[var(--bg-tertiary)] px-2 py-1 rounded shrink-0">
+                  <span className="text-xs text-[var(--text-secondary)] bg-[var(--bg-input)] px-2 py-1 rounded shrink-0" style={{ fontFamily: 'var(--mono)' }}>
                     Rule: {r.riskScore}/100
                   </span>
-                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium shrink-0">
-                    {exp ? 'Hide' : 'Explain →'}
+                  <span className="text-xs text-[var(--accent)] font-medium shrink-0">
+                    {exp ? 'Hide' : 'Explain \u2192'}
                   </span>
                 </button>
                 {exp && (
-                  <div className="border-t border-[var(--border-primary)] p-4 bg-[var(--bg-secondary)]">
+                  <div className="border-t border-[var(--border-primary)] p-4 bg-[var(--bg-hover)]">
                     <ExplanationCard exp={exp} compact />
                   </div>
                 )}
@@ -183,9 +184,9 @@ function ExplanationCard({ exp, compact = false }: { exp: Explanation; compact?:
   const probPct = Math.round(exp.probability * 100)
   const confPct = Math.round(exp.confidence * 100)
   const verdictColor =
-    exp.verdict === 'phishing' ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800'
-    : exp.verdict === 'legitimate' ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800'
-    : 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800'
+    exp.verdict === 'phishing' ? 'text-[var(--rust)] bg-[var(--rust)]/10 border-[var(--rust)]'
+    : exp.verdict === 'legitimate' ? 'text-[var(--signal)] bg-[var(--signal)]/10 border-[var(--signal-deep)]'
+    : 'text-[var(--amber)] bg-[var(--amber)]/10 border-[var(--amber)]'
   const verdictIcon =
     exp.verdict === 'phishing' ? <AlertOctagon size={16} />
     : exp.verdict === 'legitimate' ? <ShieldCheck size={16} />
@@ -214,11 +215,11 @@ function ExplanationCard({ exp, compact = false }: { exp: Explanation; compact?:
 
       {/* Probability bar */}
       <div className="mb-5">
-        <div className="flex justify-between text-xs text-[var(--text-tertiary)] mb-1">
+        <div className="flex justify-between text-xs text-[var(--text-tertiary)] mb-1" style={{ fontFamily: 'var(--mono)' }}>
           <span>Legitimate</span>
           <span>Phishing</span>
         </div>
-        <div className="h-3 bg-gradient-to-r from-emerald-200 via-amber-200 to-red-200 dark:from-emerald-900/40 dark:via-amber-900/40 dark:to-red-900/40 rounded-full relative overflow-hidden">
+        <div className="h-3 rounded-full relative overflow-hidden" style={{ background: 'linear-gradient(to right, var(--signal), var(--amber), var(--rust))' }}>
           <div
             className="absolute top-0 bottom-0 w-0.5 bg-[var(--text-primary)] shadow"
             style={{ left: `${probPct}%`, transform: 'translateX(-50%)' }}
@@ -230,8 +231,8 @@ function ExplanationCard({ exp, compact = false }: { exp: Explanation; compact?:
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-red-500"></div>
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Words Pushing → Phishing</h3>
+            <div className="w-2 h-2 rounded-full bg-[var(--rust)]"></div>
+            <h3 className="kicker text-xs font-semibold uppercase tracking-widest text-[var(--text-tertiary)]" style={{ fontFamily: 'var(--mono)' }}>Words Pushing \u2192 Phishing</h3>
           </div>
           {exp.topPhishTokens.length === 0 && <div className="text-xs text-[var(--text-tertiary)]">None</div>}
           <div className="space-y-1.5">
@@ -239,11 +240,11 @@ function ExplanationCard({ exp, compact = false }: { exp: Explanation; compact?:
               const width = Math.round((Math.abs(t.phishScore) / maxAbs) * 100)
               return (
                 <div key={t.token} className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-[var(--text-primary)] w-24 truncate">{t.token}</span>
-                  <div className="flex-1 h-4 bg-[var(--bg-tertiary)] rounded overflow-hidden">
-                    <div className="h-full bg-red-500/70" style={{ width: `${width}%` }}></div>
+                  <span className="text-xs text-[var(--text-primary)] w-24 truncate" style={{ fontFamily: 'var(--mono)' }}>{t.token}</span>
+                  <div className="flex-1 h-4 bg-[var(--bg-input)] rounded overflow-hidden">
+                    <div className="h-full bg-[var(--rust)]/70 bar-fill" style={{ width: `${width}%` }}></div>
                   </div>
-                  {t.count > 1 && <span className="text-[10px] text-[var(--text-tertiary)] font-mono">×{t.count}</span>}
+                  {t.count > 1 && <span className="text-[10px] text-[var(--text-tertiary)]" style={{ fontFamily: 'var(--mono)' }}>\u00d7{t.count}</span>}
                 </div>
               )
             })}
@@ -252,8 +253,8 @@ function ExplanationCard({ exp, compact = false }: { exp: Explanation; compact?:
 
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">Words Pushing → Legitimate</h3>
+            <div className="w-2 h-2 rounded-full bg-[var(--signal)]"></div>
+            <h3 className="kicker text-xs font-semibold uppercase tracking-widest text-[var(--text-tertiary)]" style={{ fontFamily: 'var(--mono)' }}>Words Pushing \u2192 Legitimate</h3>
           </div>
           {exp.topHamTokens.length === 0 && <div className="text-xs text-[var(--text-tertiary)]">None</div>}
           <div className="space-y-1.5">
@@ -261,11 +262,11 @@ function ExplanationCard({ exp, compact = false }: { exp: Explanation; compact?:
               const width = Math.round((Math.abs(t.phishScore) / maxAbs) * 100)
               return (
                 <div key={t.token} className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-[var(--text-primary)] w-24 truncate">{t.token}</span>
-                  <div className="flex-1 h-4 bg-[var(--bg-tertiary)] rounded overflow-hidden">
-                    <div className="h-full bg-emerald-500/70" style={{ width: `${width}%` }}></div>
+                  <span className="text-xs text-[var(--text-primary)] w-24 truncate" style={{ fontFamily: 'var(--mono)' }}>{t.token}</span>
+                  <div className="flex-1 h-4 bg-[var(--bg-input)] rounded overflow-hidden">
+                    <div className="h-full bg-[var(--signal)]/70 bar-fill" style={{ width: `${width}%` }}></div>
                   </div>
-                  {t.count > 1 && <span className="text-[10px] text-[var(--text-tertiary)] font-mono">×{t.count}</span>}
+                  {t.count > 1 && <span className="text-[10px] text-[var(--text-tertiary)]" style={{ fontFamily: 'var(--mono)' }}>\u00d7{t.count}</span>}
                 </div>
               )
             })}
@@ -274,7 +275,7 @@ function ExplanationCard({ exp, compact = false }: { exp: Explanation; compact?:
       </div>
 
       {!compact && (
-        <div className="mt-4 pt-4 border-t border-[var(--border-primary)] text-xs text-[var(--text-tertiary)]">
+        <div className="mt-4 pt-4 border-t border-[var(--border-primary)] text-xs text-[var(--text-tertiary)]" style={{ fontFamily: 'var(--mono)' }}>
           Analyzed {exp.token_count} tokens · Model trained on {exp.model_phish_docs} phishing + {exp.model_ham_docs} legitimate examples
         </div>
       )}
